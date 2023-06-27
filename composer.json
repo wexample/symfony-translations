@@ -1,0 +1,21 @@
+{
+  "name": "wexample/symfony-translations",
+  "description": "A translation override to support files overrides, includes and multiple domains in Symfony translations",
+  "type": "library",
+  "license": "MIT",
+  "version": "0.1.0",
+  "autoload": {
+    "psr-4": {
+      "Wexample\\SymfonyApi\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "weeger",
+      "email": "romain.weeger@wexample.com"
+    }
+  ],
+  "require": {
+    "wexample/symfony-helpers": "^0.1.44"
+  }
+}
