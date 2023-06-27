@@ -1,6 +1,6 @@
 {
   "name": "wexample/symfony-translations",
-  "description": "A translation override to support files overrides, includes and multiple domains in Symfony translations",
+  "description": "A translations service overrides to support translations files includes and multiple domains in Symfony translations",
   "type": "library",
   "license": "MIT",
   "version": "0.1.0",
