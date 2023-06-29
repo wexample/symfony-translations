@@ -1,0 +1,17 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    Wexample\SymfonyTranslations\:
+        resource: '../../{Service,Twig}'
+        tags: ['controller.service_arguments']
+
+    # Override translation service.
+    Wexample\SymfonyTranslations\Translation\Translator:
+      decorates: translator
+      arguments:
+        - '@translator.default'
+        - {}
+      public: false

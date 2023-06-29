@@ -11,6 +11,11 @@ class WexampleSymfonyTranslationsExtension extends AbstractWexampleSymfonyExtens
         array $configs,
         ContainerBuilder $container
     ) {
+        $this->loadConfig(
+            __DIR__,
+            $container
+        );
+
         $configuration = new Configuration();
         $paths = $this->processConfiguration($configuration, $configs);
         $container->setParameter('translations_paths', $paths['translations_paths']);
