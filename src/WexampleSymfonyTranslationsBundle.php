@@ -1,6 +1,6 @@
 <?php
 
-namespace Wexample\SymfonyApi;
+namespace Wexample\SymfonyTranslations;
 
 use Wexample\SymfonyHelpers\AbstractBundle;
 

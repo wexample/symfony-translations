@@ -6,7 +6,7 @@
     "version": "0.1.4",
     "autoload": {
         "psr-4": {
-            "Wexample\\SymfonyApi\\": "src/"
+            "Wexample\\SymfonyTranslations\\": "src/"
         }
     },
     "authors": [
