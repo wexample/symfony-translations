@@ -3,7 +3,7 @@
     "description": "A translations service overrides to support translations files includes and multiple domains in Symfony translations",
     "type": "library",
     "license": "MIT",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "autoload": {
         "psr-4": {
             "Wexample\\SymfonyTranslations\\": "src/"
@@ -16,6 +16,6 @@
         }
     ],
     "require": {
-        "wexample/symfony-helpers": "^0.1.68"
+        "wexample/symfony-helpers": "^0.1.69"
     }
 }
