@@ -70,6 +70,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // Search into "translation" folder for sub folders.
         // Allow notation : path.to.folder::translation.key
         $pathTranslationsAll = $parameterBag->get('translations_paths');
+
         // Add root translations
         $pathTranslationsAll[] = $pathProject.'/translations';
 
