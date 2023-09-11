@@ -2,7 +2,10 @@
 
 namespace Wexample\SymfonyTranslations\Translation;
 
+use Exception;
 use Psr\Cache\InvalidArgumentException;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\HttpKernel\KernelInterface;
@@ -13,6 +16,22 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\SymfonyHelpers\Helper\ClassHelper;
 use Wexample\SymfonyHelpers\Helper\FileHelper;
 use Wexample\SymfonyHelpers\Helper\VariableHelper;
+use function array_filter;
+use function array_merge;
+use function array_pop;
+use function current;
+use function end;
+use function explode;
+use function file_exists;
+use function implode;
+use function is_array;
+use function is_null;
+use function pathinfo;
+use function str_replace;
+use function str_starts_with;
+use function strlen;
+use function strpos;
+use function substr;
 
 class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface
 {
@@ -52,7 +71,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     private array $locales = [];
 
     /**
-     * @throws InvalidArgumentException|\Exception
+     * @throws InvalidArgumentException|Exception
      */
     public function __construct(
         public \Symfony\Bundle\FrameworkBundle\Translation\Translator $translator,
@@ -63,7 +82,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $pathProject = $kernel->getProjectDir();
 
         // Merge all existing locales.
-        foreach (\array_merge($this->translator->getFallbackLocales(), [$this->getLocale()]) as $locale) {
+        foreach (array_merge($this->translator->getFallbackLocales(), [$this->getLocale()]) as $locale) {
             $this->addLocale($locale);
         }
 
@@ -75,7 +94,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $pathTranslationsAll[] = $pathProject.'/translations';
 
         foreach ($pathTranslationsAll as $pathTranslations) {
-            if (\file_exists($pathTranslations)) {
+            if (file_exists($pathTranslations)) {
                 $this->addTranslationDirectory(
                     $pathTranslations,
                 );
@@ -88,16 +107,16 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function addTranslationDirectory(
         string $pathTranslations
     ) {
-        $it = new \RecursiveDirectoryIterator(
+        $it = new RecursiveDirectoryIterator(
             $pathTranslations
         );
 
         /** @var SplFileInfo $file */
-        foreach (new \RecursiveIteratorIterator($it) as $file) {
-            $info = (object) \pathinfo($file);
+        foreach (new RecursiveIteratorIterator($it) as $file) {
+            $info = (object) pathinfo($file);
 
             if (FileHelper::FILE_EXTENSION_YML === $info->extension) {
-                $exp = \explode(FileHelper::EXTENSION_SEPARATOR, $info->filename);
+                $exp = explode(FileHelper::EXTENSION_SEPARATOR, $info->filename);
 
                 $subDir = FileHelper::buildRelativePath(
                     $info->dirname,
@@ -108,7 +127,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 // There is a subdirectory
                 // (allow translation files at dir root)
                 if (VariableHelper::_EMPTY_STRING !== $subDir) {
-                    $domain = \explode(
+                    $domain = explode(
                         '/',
                         $subDir
                     );
@@ -116,7 +135,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
                 // Append file name
                 $domain[] = $exp[0];
-                $domain = \implode(self::KEYS_SEPARATOR, $domain);
+                $domain = implode(self::KEYS_SEPARATOR, $domain);
 
                 $this->addLocale($exp[1]);
 
@@ -135,7 +154,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      *   - Include key: "@other.translation.file::other.key"
      *   - Include same key: "@other.translation.file::%".
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function resolveCatalog()
     {
@@ -176,7 +195,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     }
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public function resolveCatalogTranslations(
         array $translations,
@@ -202,7 +221,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     }
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public function resolveExtend(
         array $translations,
@@ -219,7 +238,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 return $translations + $this->resolveExtend($all[$extendsDomain], $locale);
             }
 
-            throw new \Exception('Unable to extend translations. Domain does not exists : '.$extendsDomain);
+            throw new Exception('Unable to extend translations. Domain does not exists : '.$extendsDomain);
         }
 
         return $translations;
@@ -227,11 +246,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function trimDomain(string $domain): string
     {
-        return \substr($domain, 1);
+        return substr($domain, 1);
     }
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public function resolveCatalogItem(
         string $key,
@@ -263,14 +282,15 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     $locale
                 );
             } else {
-                $subTranslations = \array_filter(
+                $subTranslations = array_filter(
                     $all[$refDomain],
-                    function (
+                    function(
                         $key
-                    ) use (
+                    ) use
+                    (
                         $refKey
                     ): bool {
-                        return \str_starts_with($key, $refKey.self::KEYS_SEPARATOR);
+                        return str_starts_with($key, $refKey.self::KEYS_SEPARATOR);
                     },
                     ARRAY_FILTER_USE_KEY
                 );
@@ -286,11 +306,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 $keyDiff = $key;
                 $prefix = $refKey.self::KEYS_SEPARATOR;
 
-                if (\str_starts_with($outputKey, $prefix)) {
+                if (str_starts_with($outputKey, $prefix)) {
                     $keyDiff = $key.self::KEYS_SEPARATOR
-                        .\substr(
+                        .substr(
                             $outputKey,
-                            \strlen($prefix)
+                            strlen($prefix)
                         );
                 }
 
@@ -314,8 +334,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function splitDomain(?string $id): ?string
     {
-        if (\strpos($id, self::DOMAIN_SEPARATOR)) {
-            return \current(\explode(self::DOMAIN_SEPARATOR, $id));
+        if (strpos($id, self::DOMAIN_SEPARATOR)) {
+            return current(explode(self::DOMAIN_SEPARATOR, $id));
         }
 
         return null;
@@ -323,10 +343,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function splitId(string $id): ?string
     {
-        if (\strpos($id, self::DOMAIN_SEPARATOR)) {
-            $exp = \explode(self::DOMAIN_SEPARATOR, $id);
+        if (strpos($id, self::DOMAIN_SEPARATOR)) {
+            $exp = explode(self::DOMAIN_SEPARATOR, $id);
 
-            return \end($exp);
+            return end($exp);
         }
 
         return null;
@@ -339,7 +359,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $domain = null,
         string $locale = null
     ): string {
-        if (\is_array($id)) {
+        if (is_array($id)) {
             $output = [];
 
             foreach ($id as $idPart) {
@@ -351,7 +371,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 );
             }
 
-            return \implode($separator, $output);
+            return implode($separator, $output);
         }
 
         return $id;
@@ -366,7 +386,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $parameters = $this->updateParameters($parameters);
         $default = $id;
 
-        if (\is_null($domain) && $domain = $this->splitDomain($id)) {
+        if (is_null($domain) && $domain = $this->splitDomain($id)) {
             $id = $this->splitId($id);
             $domain = $this->resolveDomain($domain);
 
@@ -394,12 +414,12 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     protected function updateParameters(array $parameters = []): array
     {
-        return \array_merge($this->parameters, $parameters);
+        return array_merge($this->parameters, $parameters);
     }
 
     public function resolveDomain(string $domain): ?string
     {
-        if (\str_starts_with($domain, self::DOMAIN_PREFIX)) {
+        if (str_starts_with($domain, self::DOMAIN_PREFIX)) {
             $domainPart = $this->trimDomain($domain);
             if (isset($this->domainsStack[$domainPart])) {
                 return $this->getDomain($domainPart);
@@ -413,7 +433,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         return empty($this->domainsStack[$name]) ?
             null :
-            \end($this->domainsStack[$name]);
+            end($this->domainsStack[$name]);
     }
 
     public function setDomainFromPath(
@@ -429,18 +449,18 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public static function buildDomainFromPath(string $path): string
     {
-        $info = (object) \pathinfo($path);
+        $info = (object) pathinfo($path);
 
         // The path format is valid.
         if ('.' !== $info->dirname) {
-            return \str_replace(
-                '/',
-                self::KEYS_SEPARATOR,
-                $info->dirname
-            )
+            return str_replace(
+                    '/',
+                    self::KEYS_SEPARATOR,
+                    $info->dirname
+                )
                 .self::KEYS_SEPARATOR
-                .\current(
-                    \explode(self::KEYS_SEPARATOR, $info->basename)
+                .current(
+                    explode(self::KEYS_SEPARATOR, $info->basename)
                 );
         } else {
             return $path;
@@ -456,7 +476,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function revertDomain(string $name): void
     {
-        \array_pop($this->domainsStack[$name]);
+        array_pop($this->domainsStack[$name]);
     }
 
     public function setLocale($locale)
@@ -498,8 +518,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function buildRegexForFilterKey(string $key): string
     {
-        $keyRegex = \str_replace('*', '[a-zA-Z0-9]', $this->splitId($key));
-        $keyRegex = \str_replace('.', '\.', $keyRegex);
+        $keyRegex = str_replace('*', '[a-zA-Z0-9]', $this->splitId($key));
+        $keyRegex = str_replace('.', '\.', $keyRegex);
 
         return '/'.$keyRegex.'/';
     }

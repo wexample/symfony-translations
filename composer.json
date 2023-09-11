@@ -1,21 +1,21 @@
 {
-    "name": "wexample/symfony-translations",
-    "description": "A translations service overrides to support translations files includes and multiple domains in Symfony translations",
-    "type": "library",
-    "license": "MIT",
-    "version": "0.1.11",
-    "autoload": {
-        "psr-4": {
-            "Wexample\\SymfonyTranslations\\": "src/"
-        }
-    },
-    "authors": [
-        {
-            "name": "weeger",
-            "email": "romain.weeger@wexample.com"
-        }
-    ],
-    "require": {
-        "wexample/symfony-helpers": "^0.1.75"
+  "name": "wexample/symfony-translations",
+  "description": "A translations service overrides to support translations files includes and multiple domains in Symfony translations",
+  "type": "library",
+  "license": "MIT",
+  "version": "0.1.11",
+  "autoload": {
+    "psr-4": {
+      "Wexample\\SymfonyTranslations\\": "src/"
     }
+  },
+  "authors": [
+    {
+      "name": "weeger",
+      "email": "romain.weeger@wexample.com"
+    }
+  ],
+  "require": {
+    "wexample/symfony-helpers": "^0.1.75"
+  }
 }
