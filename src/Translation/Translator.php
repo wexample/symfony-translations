@@ -249,6 +249,14 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         return substr($domain, 1);
     }
 
+    function isTranslationLink(string $string): bool
+    {
+        return preg_match(
+                '/^'.self::DOMAIN_PREFIX.'[a-zA-Z_\-\.]+::([a-zA-Z_\-\.]+|'.self::DOMAIN_SAME_KEY_WILDCARD.')+$/',
+                $string
+            ) === 1;
+    }
+
     /**
      * @throws Exception
      */
@@ -262,7 +270,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $all = $catalogue->all();
         $output = [];
 
-        if (self::DOMAIN_PREFIX === $value[0]) {
+        if ($this->isTranslationLink($value[0])) {
             $refDomain = $this->trimDomain($this->splitDomain($value));
             $refKey = $this->splitId($value);
             $shortNotation = self::DOMAIN_SAME_KEY_WILDCARD === $refKey;
