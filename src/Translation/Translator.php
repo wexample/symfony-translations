@@ -270,7 +270,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $all = $catalogue->all();
         $output = [];
 
-        if ($this->isTranslationLink($value[0])) {
+        if ($this->isTranslationLink($value)) {
             $refDomain = $this->trimDomain($this->splitDomain($value));
             $refKey = $this->splitId($value);
             $shortNotation = self::DOMAIN_SAME_KEY_WILDCARD === $refKey;
