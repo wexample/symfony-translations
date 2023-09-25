@@ -35,27 +35,27 @@ use function substr;
 
 class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface
 {
-    public const DOMAIN_SEPARATOR = ClassHelper::METHOD_SEPARATOR;
+    final public const DOMAIN_SEPARATOR = ClassHelper::METHOD_SEPARATOR;
 
-    public const DOMAIN_PREFIX = '@';
+    final public const DOMAIN_PREFIX = '@';
 
-    public const KEYS_SEPARATOR = FileHelper::EXTENSION_SEPARATOR;
+    final public const KEYS_SEPARATOR = FileHelper::EXTENSION_SEPARATOR;
 
-    public const DOMAIN_SAME_KEY_WILDCARD = '%';
+    final public const DOMAIN_SAME_KEY_WILDCARD = '%';
 
-    public const DOMAIN_TYPE_COMPONENT = VariableHelper::COMPONENT;
+    final public const DOMAIN_TYPE_COMPONENT = VariableHelper::COMPONENT;
 
-    public const DOMAIN_TYPE_FORM = VariableHelper::FORM;
+    final public const DOMAIN_TYPE_FORM = VariableHelper::FORM;
 
-    public const DOMAIN_TYPE_LAYOUT = VariableHelper::LAYOUT;
+    final public const DOMAIN_TYPE_LAYOUT = VariableHelper::LAYOUT;
 
-    public const DOMAIN_TYPE_PAGE = VariableHelper::PAGE;
+    final public const DOMAIN_TYPE_PAGE = VariableHelper::PAGE;
 
-    public const DOMAIN_TYPE_PDF = FileHelper::FILE_EXTENSION_PDF;
+    final public const DOMAIN_TYPE_PDF = FileHelper::FILE_EXTENSION_PDF;
 
-    public const DOMAIN_TYPE_VUE = FileHelper::FILE_EXTENSION_VUE;
+    final public const DOMAIN_TYPE_VUE = FileHelper::FILE_EXTENSION_VUE;
 
-    public const DOMAINS_DEFAULT = [
+    final public const DOMAINS_DEFAULT = [
         self::DOMAIN_TYPE_COMPONENT,
         self::DOMAIN_TYPE_FORM,
         self::DOMAIN_TYPE_LAYOUT,
@@ -64,7 +64,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         self::DOMAIN_TYPE_VUE,
     ];
 
-    public const FILE_EXTENDS = '~extends';
+    final public const FILE_EXTENDS = '~extends';
 
     protected array $domainsStack = [];
 
@@ -88,7 +88,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
         // Search into "translation" folder for sub folders.
         // Allow notation : path.to.folder::translation.key
-        $pathTranslationsAll = $parameterBag->get('translations_paths');
+        $pathTranslationsAll = $parameterBag->get('translations_paths') ?? [];
 
         // Add root translations
         $pathTranslationsAll[] = $pathProject.'/translations';
