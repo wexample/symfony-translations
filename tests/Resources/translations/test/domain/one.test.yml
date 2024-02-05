@@ -1,0 +1,21 @@
+include_different_key: '@test.domain.two::include_different_key_destination'
+
+include_key_full_notation: '@test.domain.two::include_key'
+
+include_key_sub_item: '@test.domain.two::simple_group.sub_item'
+
+include_key_short_notation: '@test.domain.two::%'
+
+include_resolvable_loop: '@test.domain.two::%'
+
+include_missing: '@test.domain.two::missing'
+
+simple_group:
+  simple_group_key: Simple group value
+  include_group_short_notation: '@test.domain.two::%'
+
+simple_key: Simple value
+
+deep_values: '@test.domain.two::simple_group.deeper.deeper.deeper'
+
+deep_values_2: '@test.domain.two::simple_group.deeper.deeper'

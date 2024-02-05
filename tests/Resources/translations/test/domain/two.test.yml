@@ -1,0 +1,21 @@
+include_different_key_destination: 'Included value with different key'
+
+include_key: Included value
+
+include_key_short_notation: Included string with short notation
+
+include_resolvable_loop: '@test.domain.one::simple_group.include_group_short_notation'
+
+simple_group:
+  sub_item: First level item
+  deeper:
+    deeper:
+      deeper:
+        deepOne: Deep one
+        deepTwo: Deep two
+        deepThree: Deep three
+  include_group_short_notation:
+    sub_group:
+      one: One
+      two: Two
+      three: Three
