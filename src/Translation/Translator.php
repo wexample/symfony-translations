@@ -292,14 +292,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             } else {
                 $subTranslations = array_filter(
                     $all[$refDomain],
-                    function(
-                        $key
-                    ) use
-                    (
-                        $refKey
-                    ): bool {
-                        return str_starts_with($key, $refKey.self::KEYS_SEPARATOR);
-                    },
+                    fn($key): bool => str_starts_with($key, $refKey.self::KEYS_SEPARATOR),
                     ARRAY_FILTER_USE_KEY
                 );
 
