@@ -107,7 +107,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function addTranslationDirectory(
         string $pathTranslations,
-        ?string $aliasPrefix
+        ?string $aliasPrefix = null
     ) {
         $it = new RecursiveDirectoryIterator(
             $pathTranslations
