@@ -93,10 +93,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // Add root translations
         $pathTranslationsAll[] = $pathProject.'/translations';
 
-        foreach ($pathTranslationsAll as $pathTranslations) {
+        foreach ($pathTranslationsAll as $aliasPrefix => $pathTranslations) {
             if (file_exists($pathTranslations)) {
                 $this->addTranslationDirectory(
                     $pathTranslations,
+                    str_starts_with($aliasPrefix, '@') ? $aliasPrefix : null
                 );
             }
         }
@@ -105,7 +106,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     }
 
     public function addTranslationDirectory(
-        string $pathTranslations
+        string $pathTranslations,
+        ?string $aliasPrefix
     ) {
         $it = new RecursiveDirectoryIterator(
             $pathTranslations
@@ -136,6 +138,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 // Append file name
                 $domain[] = $exp[0];
                 $domain = implode(self::KEYS_SEPARATOR, $domain);
+                $domain = $aliasPrefix ? $aliasPrefix.'.'.$domain : $domain;
 
                 $this->addLocale($exp[1]);
 

@@ -8,6 +8,11 @@ use Wexample\SymfonyTranslations\Translation\Translator;
 
 class TranslationExtension extends AbstractExtension
 {
+    public function __construct(
+        private readonly Translator $translator
+    ) {
+    }
+
     public function getFunctions(): array
     {
         return [
@@ -18,6 +23,13 @@ class TranslationExtension extends AbstractExtension
                     'translationBuildDomainFromPath',
                 ]
             ),
+            new TwigFunction(
+                'translation_debug_info',
+                [
+                    $this,
+                    'translationDebugInfo',
+                ]
+            ),
         ];
     }
 
@@ -26,5 +38,10 @@ class TranslationExtension extends AbstractExtension
         return Translator::buildDomainFromPath(
             $path
         );
+    }
+
+    public function translationDebugInfo(): array
+    {
+        return $this->translator->getCatalogues();
     }
 }
