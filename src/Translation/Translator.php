@@ -15,6 +15,7 @@ use Symfony\Contracts\Translation\LocaleAwareInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\SymfonyHelpers\Helper\ClassHelper;
 use Wexample\SymfonyHelpers\Helper\FileHelper;
+use Wexample\SymfonyHelpers\Helper\TextHelper;
 use Wexample\SymfonyHelpers\Helper\VariableHelper;
 use function array_filter;
 use function array_merge;
@@ -234,14 +235,15 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $all = $catalogue->all();
 
         if (isset($translations[static::FILE_EXTENDS])) {
-            $extendsDomain = $this->trimDomain($translations[static::FILE_EXTENDS]);
+            $extendsDomain = $translations[static::FILE_EXTENDS];
             unset($translations[static::FILE_EXTENDS]);
 
             if (isset($all[$extendsDomain])) {
                 return $translations + $this->resolveExtend($all[$extendsDomain], $locale);
             }
 
-            throw new Exception('Unable to extend translations. Domain does not exists : '.$extendsDomain);
+            throw new Exception('Unable to extend translations. Domain does not exists : '.$extendsDomain
+                .'. Existing domains are: '.TextHelper::toList(array_keys($all)));
         }
 
         return $translations;
