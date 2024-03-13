@@ -82,8 +82,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     ) {
         $pathProject = $kernel->getProjectDir();
 
-        // Merge all existing locales.
-        foreach (array_merge($this->translator->getFallbackLocales(), [$this->getLocale()]) as $locale) {
+        // Merge all existing locales, fallbacks at end.
+        foreach (array_merge([$this->getLocale()], $this->translator->getFallbackLocales()) as $locale) {
             $this->addLocale($locale);
         }
 
@@ -499,24 +499,32 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         $output = [];
 
-        if (str_contains($key, '*')) {
-            $keyRegex = $this->buildRegexForFilterKey($key);
+        foreach ($this->getAllLocales() as $locale) {
+            if (str_contains($key, '*')) {
+                $keyRegex = $this->buildRegexForFilterKey($key);
 
-            $domainAlias = $this->splitDomain($key);
-            $domainResolved = $this
-                ->resolveDomain(
-                    $domainAlias
-                );
+                $domainAlias = $this->splitDomain($key);
+                $domainResolved = $this
+                    ->resolveDomain(
+                        $domainAlias
+                    );
 
-            $allDomainTranslations = $this->translator->getCatalogue()->all($domainResolved);
 
-            foreach ($allDomainTranslations as $translationCandidateKey => $value) {
-                if (preg_match($keyRegex, $translationCandidateKey)) {
-                    $output[$domainAlias.Translator::DOMAIN_SEPARATOR.$translationCandidateKey] = $value;
+                $allDomainTranslations = $this->translator->getCatalogue($locale)->all($domainResolved);
+
+                foreach ($allDomainTranslations as $translationCandidateKey => $value) {
+                    if (preg_match($keyRegex, $translationCandidateKey)) {
+                        $key = $domainAlias.Translator::DOMAIN_SEPARATOR.$translationCandidateKey;
+                        if (!isset($output[$key])) {
+                            $output[$domainAlias.Translator::DOMAIN_SEPARATOR.$translationCandidateKey] = $value;
+                        }
+                    }
+                }
+            } else {
+                if (!isset($output[$key])) {
+                    $output[$key] = $this->trans($key, locale: $locale);
                 }
             }
-        } else {
-            $output[$key] = $this->trans($key);
         }
 
         return $output;
