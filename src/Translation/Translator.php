@@ -235,7 +235,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $all = $catalogue->all();
 
         if (isset($translations[static::FILE_EXTENDS])) {
-            $extendsDomain = $translations[static::FILE_EXTENDS];
+            $extendsDomain = $this->trimDomain($translations[static::FILE_EXTENDS]);
             unset($translations[static::FILE_EXTENDS]);
 
             if (isset($all[$extendsDomain])) {
