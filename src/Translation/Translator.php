@@ -123,7 +123,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
                 $subDir = FileHelper::buildRelativePath(
                     $info->dirname,
-                    $pathTranslations
+                    dirname($pathTranslations)
                 );
 
                 $domain = [];
@@ -139,7 +139,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 // Append file name
                 $domain[] = $exp[0];
                 $domain = implode(self::KEYS_SEPARATOR, $domain);
-                $domain = $aliasPrefix ? $aliasPrefix.'.'.$domain : $domain;
+                $domain = $aliasPrefix ? $aliasPrefix.'.'.$domain : self::DOMAIN_PREFIX . $domain;
 
                 $this->addLocale($exp[1]);
 
