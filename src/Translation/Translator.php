@@ -240,20 +240,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             $extendsDomainRaw = $this->trimDomain($translations[static::FILE_EXTENDS]);
             unset($translations[static::FILE_EXTENDS]);
 
-            $domainVariants = [
-                $extendsDomainRaw,                      // test.domain.one
-                '@' . $extendsDomainRaw,               // @test.domain.one
-                '@translations.' . $extendsDomainRaw    // @translations.test.domain.one
-            ];
-            
-            $extendsDomain = null;
-            foreach ($domainVariants as $variant) {
-                if (isset($all[$variant])) {
-                    $extendsDomain = $variant;
-                    break;
-                }
-            }
-            
+            $extendsDomain = $this->findMatchingDomainVariant($extendsDomainRaw, $all);
+
             if ($extendsDomain) {
                 return $translations + $this->resolveExtend($all[$extendsDomain], $locale, $extendsDomain);
             }
@@ -302,27 +290,15 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
             $items = [];
 
-            // Essayons plusieurs variantes du domaine pour le trouver
-            $domainVariants = [
-                $refDomain,                      // test.domain.one
-                '@' . $refDomain,               // @test.domain.one
-                '@translations.' . $refDomain    // @translations.test.domain.one
-            ];
-            
-            $foundDomain = null;
-            foreach ($domainVariants as $variant) {
-                if (isset($all[$variant])) {
-                    $foundDomain = $variant;
-                    break;
-                }
-            }
-            
+            $foundDomain = $this->findMatchingDomainVariant($refDomain, $all);
+            // If no matching domain found, use the original reference domain
+            // This will likely fail later, but it's consistent with the original behavior
             if (!$foundDomain) {
                 $foundDomain = $refDomain;
             }
 
             // Found the exact referenced key.
-            if (isset($all[$foundDomain][$refKey])) {
+            if ($foundDomain && isset($all[$foundDomain][$refKey])) {
                 $items = $this->resolveCatalogItem(
                     $refKey,
                     $all[$foundDomain][$refKey],
@@ -426,6 +402,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $parameters = $this->updateParameters($parameters);
         $default = $id;
 
+        // Extract domain from the ID if not provided explicitly
         if (is_null($domain) && $domain = $this->splitDomain($id)) {
             $id = $this->splitId($id);
             $domain = $this->resolveDomain($domain);
@@ -435,41 +412,24 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             }
         }
 
-        // Essayons plusieurs variantes du domaine pour le trouver
         $catalogue = $this->translator->getCatalogue($locale);
         $all = $catalogue->all();
-        $domainVariants = [];
         
-        if ($domain) {
-            $domainVariants = [
-                $domain,                      // test.domain.one
-                '@' . $domain,                // @test.domain.one
-                '@translations.' . $domain     // @translations.test.domain.one
-            ];
-        }
-        
-        $foundDomain = null;
-        foreach ($domainVariants as $variant) {
-            if (isset($all[$variant])) {
-                $foundDomain = $variant;
-                break;
-            }
-        }
-        
+        // Try to find the domain in the catalogue
+        $foundDomain = $this->findMatchingDomainVariant($domain, $all);
+
         if ($foundDomain) {
             if (isset($all[$foundDomain][$id])) {
                 $value = $all[$foundDomain][$id];
-
+                
+                // If the value is a translation link, resolve it
                 if ($this->isTranslationLink($value)) {
                     $refDomain = $this->trimDomain($this->splitDomain($value));
                     $refKey = $this->splitId($value);
                     
+                    // Check if the referenced key exists in any domain variant
                     $refExists = false;
-                    $refDomainVariants = [
-                        $refDomain,                      // test.domain.one
-                        '@' . $refDomain,                // @test.domain.one
-                        '@translations.' . $refDomain     // @translations.test.domain.one
-                    ];
+                    $refDomainVariants = $this->generateDomainVariants($refDomain);
                     
                     foreach ($refDomainVariants as $refVariant) {
                         if (isset($all[$refVariant]) && isset($all[$refVariant][$refKey])) {
@@ -478,10 +438,12 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                         }
                     }
                     
+                    // If the referenced key doesn't exist, return the original link
                     if (!$refExists) {
                         return $value;
                     }
                     
+                    // Otherwise, recursively translate the referenced key
                     return $this->trans($refKey, $parameters, $refDomain, $locale);
                 }
                 
@@ -584,5 +546,45 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function buildRegexForFilterKey(string $key): string
     {
         return '/^'.str_replace('*', '.*', $key).'$/';
+    }
+
+    /**
+     * Generate domain variants and find the first matching one in the catalogue.
+     * 
+     * @param string $domain Base domain name
+     * @param array $all All domains from the catalogue
+     * @return string|null Found domain variant or null if not found
+     */
+    private function findMatchingDomainVariant(string $domain, array $all): ?string
+    {
+        // Try different variants of domain name to find the right one
+        $domainVariants = [
+            $domain,                      // test.domain.one
+            '@' . $domain,                // @test.domain.one
+            '@translations.' . $domain     // @translations.test.domain.one
+        ];
+        
+        foreach ($domainVariants as $variant) {
+            if (isset($all[$variant])) {
+                return $variant;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Generate domain variants for a given domain.
+     * 
+     * @param string $domain Base domain name
+     * @return array Array of domain variants
+     */
+    private function generateDomainVariants(string $domain): array
+    {
+        return [
+            $domain,                      // test.domain.one
+            '@' . $domain,                // @test.domain.one
+            '@translations.' . $domain     // @translations.test.domain.one
+        ];
     }
 }
