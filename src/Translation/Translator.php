@@ -362,6 +362,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         if (strpos($id, self::DOMAIN_SEPARATOR)) {
             $exp = explode(self::DOMAIN_SEPARATOR, $id);
+
             return end($exp);
         }
 
@@ -378,9 +379,9 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         if (is_array($id)) {
             $output = [];
 
-            foreach ($id as $value) {
+            foreach ($id as $idPart) {
                 $output[] = $this->trans(
-                    $value,
+                    $idPart,
                     $parameters,
                     $domain,
                     $locale
@@ -473,56 +474,66 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         return array_merge($this->parameters, $parameters);
     }
 
-    /**
-     * Resolve a domain name to its actual value.
-     * 
-     * @param string|null $domain Domain name to resolve
-     * @return string|null Resolved domain or null if not found
-     */
-    public function resolveDomain(?string $domain): ?string
+    public function resolveDomain(string $domain): ?string
     {
-        if ($domain === null) {
-            return null;
-        }
-        
         if (str_starts_with($domain, self::DOMAIN_PREFIX)) {
-            return $domain;
+            $domainPart = $this->trimDomain($domain);
+            if (isset($this->domainsStack[$domainPart])) {
+                return $this->getDomain($domainPart);
+            }
         }
 
-        if (isset($this->domainsStack[$domain])) {
-            return $this->domainsStack[$domain];
-        }
-
-        return null;
+        return $domain;
     }
 
     public function getDomain(string $name): ?string
     {
-        return $this->domainsStack[$name] ?? null;
+        return empty($this->domainsStack[$name]) ?
+            null :
+            end($this->domainsStack[$name]);
     }
 
     public function setDomainFromPath(
         string $name,
         string $path
-    ): void {
-        $this->setDomain($name, $this->buildDomainFromPath($path));
+    ): string {
+        $domain = Translator::buildDomainFromPath($path);
+
+        $this->setDomain($name, $domain);
+
+        return $domain;
     }
 
-    public function buildDomainFromPath(string $path): string
+    public static function buildDomainFromPath(string $path): string
     {
-        return self::DOMAIN_PREFIX.str_replace('/', self::KEYS_SEPARATOR, $path);
+        $info = (object) pathinfo($path);
+
+        // The path format is valid.
+        if ('.' !== $info->dirname) {
+            return str_replace(
+                    '/',
+                    self::KEYS_SEPARATOR,
+                    $info->dirname
+                )
+                .self::KEYS_SEPARATOR
+                .current(
+                    explode(self::KEYS_SEPARATOR, $info->basename)
+                );
+        } else {
+            return $path;
+        }
     }
 
     public function setDomain(
         string $name,
         string $value
     ): void {
-        $this->domainsStack[$name] = $value;
+        $this->domainsStack[$name][] = $value;
     }
 
     public function revertDomain(string $name): void
     {
-        unset($this->domainsStack[$name]);
+        array_pop($this->domainsStack[$name]);
     }
 
     public function setLocale($locale)
