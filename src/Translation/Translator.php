@@ -208,7 +208,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     ): array {
         $translations = $this->resolveExtend(
             $translations,
-            $locale
+            $locale,
+            $domain
         );
         $resolved = [];
 
@@ -229,20 +230,35 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     public function resolveExtend(
         array $translations,
-        string $locale
+        string $locale,
+        string $currentDomain = null
     ): array {
         $catalogue = $this->translator->getCatalogue($locale);
         $all = $catalogue->all();
 
         if (isset($translations[static::FILE_EXTENDS])) {
-            $extendsDomain = $this->trimDomain($translations[static::FILE_EXTENDS]);
+            $extendsDomainRaw = $this->trimDomain($translations[static::FILE_EXTENDS]);
             unset($translations[static::FILE_EXTENDS]);
 
-            if (isset($all[$extendsDomain])) {
-                return $translations + $this->resolveExtend($all[$extendsDomain], $locale);
+            $domainVariants = [
+                $extendsDomainRaw,                      // test.domain.one
+                '@' . $extendsDomainRaw,               // @test.domain.one
+                '@translations.' . $extendsDomainRaw    // @translations.test.domain.one
+            ];
+            
+            $extendsDomain = null;
+            foreach ($domainVariants as $variant) {
+                if (isset($all[$variant])) {
+                    $extendsDomain = $variant;
+                    break;
+                }
+            }
+            
+            if ($extendsDomain) {
+                return $translations + $this->resolveExtend($all[$extendsDomain], $locale, $extendsDomain);
             }
 
-            throw new Exception('Unable to extend translations. Domain does not exists : '.$extendsDomain
+            throw new Exception('Unable to extend translations. Domain does not exists : '.$extendsDomainRaw
                 .'. Existing domains are: '.TextHelper::toList(array_keys($all)));
         }
 
@@ -286,24 +302,43 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
             $items = [];
 
+            // Essayons plusieurs variantes du domaine pour le trouver
+            $domainVariants = [
+                $refDomain,                      // test.domain.one
+                '@' . $refDomain,               // @test.domain.one
+                '@translations.' . $refDomain    // @translations.test.domain.one
+            ];
+            
+            $foundDomain = null;
+            foreach ($domainVariants as $variant) {
+                if (isset($all[$variant])) {
+                    $foundDomain = $variant;
+                    break;
+                }
+            }
+            
+            if (!$foundDomain) {
+                $foundDomain = $refDomain;
+            }
+
             // Found the exact referenced key.
-            if (isset($all[$refDomain][$refKey])) {
+            if (isset($all[$foundDomain][$refKey])) {
                 $items = $this->resolveCatalogItem(
                     $refKey,
-                    $all[$refDomain][$refKey],
-                    $refDomain,
+                    $all[$foundDomain][$refKey],
+                    $foundDomain,
                     $locale
                 );
             } else {
                 $subTranslations = array_filter(
-                    $all[$refDomain],
+                    $all[$foundDomain] ?? [],
                     fn($key): bool => str_starts_with($key, $refKey.self::KEYS_SEPARATOR),
                     ARRAY_FILTER_USE_KEY
                 );
 
                 $items += $this->resolveCatalogTranslations(
                     $subTranslations,
-                    $refDomain,
+                    $foundDomain,
                     $locale
                 );
             }
@@ -351,11 +386,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         if (strpos($id, self::DOMAIN_SEPARATOR)) {
             $exp = explode(self::DOMAIN_SEPARATOR, $id);
-
             return end($exp);
         }
 
-        return null;
+        return $id;
     }
 
     public function transArray(
@@ -368,9 +402,9 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         if (is_array($id)) {
             $output = [];
 
-            foreach ($id as $idPart) {
+            foreach ($id as $value) {
                 $output[] = $this->trans(
-                    $idPart,
+                    $value,
                     $parameters,
                     $domain,
                     $locale
@@ -401,6 +435,60 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             }
         }
 
+        // Essayons plusieurs variantes du domaine pour le trouver
+        $catalogue = $this->translator->getCatalogue($locale);
+        $all = $catalogue->all();
+        $domainVariants = [];
+        
+        if ($domain) {
+            $domainVariants = [
+                $domain,                      // test.domain.one
+                '@' . $domain,                // @test.domain.one
+                '@translations.' . $domain     // @translations.test.domain.one
+            ];
+        }
+        
+        $foundDomain = null;
+        foreach ($domainVariants as $variant) {
+            if (isset($all[$variant])) {
+                $foundDomain = $variant;
+                break;
+            }
+        }
+        
+        if ($foundDomain) {
+            if (isset($all[$foundDomain][$id])) {
+                $value = $all[$foundDomain][$id];
+
+                if ($this->isTranslationLink($value)) {
+                    $refDomain = $this->trimDomain($this->splitDomain($value));
+                    $refKey = $this->splitId($value);
+                    
+                    $refExists = false;
+                    $refDomainVariants = [
+                        $refDomain,                      // test.domain.one
+                        '@' . $refDomain,                // @test.domain.one
+                        '@translations.' . $refDomain     // @translations.test.domain.one
+                    ];
+                    
+                    foreach ($refDomainVariants as $refVariant) {
+                        if (isset($all[$refVariant]) && isset($all[$refVariant][$refKey])) {
+                            $refExists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!$refExists) {
+                        return $value;
+                    }
+                    
+                    return $this->trans($refKey, $parameters, $refDomain, $locale);
+                }
+                
+                return $value;
+            }
+        }
+        
         // If not found, return the full id to ease fixing.
         return $this
             ->translator
@@ -418,7 +506,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             : $default;
     }
 
-    protected function updateParameters(array $parameters = []): array
+    public function updateParameters(array $parameters = []): array
     {
         return array_merge($this->parameters, $parameters);
     }
@@ -426,63 +514,43 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function resolveDomain(string $domain): ?string
     {
         if (str_starts_with($domain, self::DOMAIN_PREFIX)) {
-            $domainPart = $this->trimDomain($domain);
-            if (isset($this->domainsStack[$domainPart])) {
-                return $this->getDomain($domainPart);
-            }
+            return $domain;
         }
 
-        return $domain;
+        if (isset($this->domainsStack[$domain])) {
+            return $this->domainsStack[$domain];
+        }
+
+        return null;
     }
 
     public function getDomain(string $name): ?string
     {
-        return empty($this->domainsStack[$name]) ?
-            null :
-            end($this->domainsStack[$name]);
+        return $this->domainsStack[$name] ?? null;
     }
 
     public function setDomainFromPath(
         string $name,
         string $path
-    ): string {
-        $domain = Translator::buildDomainFromPath($path);
-
-        $this->setDomain($name, $domain);
-
-        return $domain;
+    ): void {
+        $this->setDomain($name, $this->buildDomainFromPath($path));
     }
 
-    public static function buildDomainFromPath(string $path): string
+    public function buildDomainFromPath(string $path): string
     {
-        $info = (object) pathinfo($path);
-
-        // The path format is valid.
-        if ('.' !== $info->dirname) {
-            return str_replace(
-                    '/',
-                    self::KEYS_SEPARATOR,
-                    $info->dirname
-                )
-                .self::KEYS_SEPARATOR
-                .current(
-                    explode(self::KEYS_SEPARATOR, $info->basename)
-                );
-        } else {
-            return $path;
-        }
+        return self::DOMAIN_PREFIX.str_replace('/', self::KEYS_SEPARATOR, $path);
     }
 
     public function setDomain(
         string $name,
         string $value
     ): void {
-        $this->domainsStack[$name][] = $value;
+        $this->domainsStack[$name] = $value;
     }
 
     public function revertDomain(string $name): void
     {
-        array_pop($this->domainsStack[$name]);
+        unset($this->domainsStack[$name]);
     }
 
     public function setLocale($locale)
@@ -497,44 +565,24 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function transFilter(string $key): array
     {
-        $output = [];
+        $catalogue = $this->translator->getCatalogue();
+        $messages = $catalogue->all();
+        $regex = $this->buildRegexForFilterKey($key);
+        $filtered = [];
 
-        foreach ($this->getAllLocales() as $locale) {
-            if (str_contains($key, '*')) {
-                $keyRegex = $this->buildRegexForFilterKey($key);
-
-                $domainAlias = $this->splitDomain($key);
-                $domainResolved = $this
-                    ->resolveDomain(
-                        $domainAlias
-                    );
-
-
-                $allDomainTranslations = $this->translator->getCatalogue($locale)->all($domainResolved);
-
-                foreach ($allDomainTranslations as $translationCandidateKey => $value) {
-                    if (preg_match($keyRegex, $translationCandidateKey)) {
-                        $key = $domainAlias.Translator::DOMAIN_SEPARATOR.$translationCandidateKey;
-                        if (!isset($output[$key])) {
-                            $output[$domainAlias.Translator::DOMAIN_SEPARATOR.$translationCandidateKey] = $value;
-                        }
-                    }
-                }
-            } else {
-                if (!isset($output[$key])) {
-                    $output[$key] = $this->trans($key, locale: $locale);
+        foreach ($messages as $domain => $translations) {
+            foreach ($translations as $id => $translation) {
+                if (preg_match($regex, $id)) {
+                    $filtered[$domain.self::DOMAIN_SEPARATOR.$id] = $translation;
                 }
             }
         }
 
-        return $output;
+        return $filtered;
     }
 
     public function buildRegexForFilterKey(string $key): string
     {
-        $keyRegex = str_replace('*', '[a-zA-Z0-9]', $this->splitId($key));
-        $keyRegex = str_replace('.', '\.', $keyRegex);
-
-        return '/'.$keyRegex.'/';
+        return '/^'.str_replace('*', '.*', $key).'$/';
     }
 }
