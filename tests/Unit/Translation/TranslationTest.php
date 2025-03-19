@@ -47,6 +47,32 @@ class TranslationTest extends AbstractApplicationTestCase
         );
 
         $this->_testOne('test.domain.three');
+        
+        // Test with null domain
+        $this->testNullDomain();
+    }
+    
+    /**
+     * Test translation with null domain
+     */
+    public function testNullDomain()
+    {
+        /** @var Translator $translator */
+        $translator = $this->translator;
+        
+        // Test with a direct call to the underlying Symfony translator
+        // This bypasses our custom domain handling and uses the default 'messages' domain
+        $value = 'Direct translation with null domain';
+        $key = 'direct_null_domain_key';
+        
+        // Add the translation directly to the Symfony translator
+        $translator->translator->getCatalogue()->set($key, $value, 'messages');
+        
+        // Test translation with null domain using the direct key
+        $this->assertEquals(
+            $value,
+            $translator->trans($key, [], null)
+        );
     }
 
     protected function _testOne(string $domain = 'test.domain.one')

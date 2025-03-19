@@ -462,7 +462,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 ->trans(
                     $id,
                     $parameters,
-                    $domain,
+                    $domain ?: 'messages',
                     $locale
                 )
             : $default;
@@ -473,8 +473,18 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         return array_merge($this->parameters, $parameters);
     }
 
-    public function resolveDomain(string $domain): ?string
+    /**
+     * Resolve a domain name to its actual value.
+     * 
+     * @param string|null $domain Domain name to resolve
+     * @return string|null Resolved domain or null if not found
+     */
+    public function resolveDomain(?string $domain): ?string
     {
+        if ($domain === null) {
+            return null;
+        }
+        
         if (str_starts_with($domain, self::DOMAIN_PREFIX)) {
             return $domain;
         }
@@ -551,18 +561,19 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     /**
      * Generate domain variants and find the first matching one in the catalogue.
      * 
-     * @param string $domain Base domain name
+     * @param string|null $domain Base domain name
      * @param array $all All domains from the catalogue
      * @return string|null Found domain variant or null if not found
      */
-    private function findMatchingDomainVariant(string $domain, array $all): ?string
+    private function findMatchingDomainVariant(?string $domain, array $all): ?string
     {
+        if ($domain === null) {
+            // If domain is null, try to use 'messages' (Symfony default domain)
+            return isset($all['messages']) ? 'messages' : null;
+        }
+        
         // Try different variants of domain name to find the right one
-        $domainVariants = [
-            $domain,                      // test.domain.one
-            '@' . $domain,                // @test.domain.one
-            '@translations.' . $domain     // @translations.test.domain.one
-        ];
+        $domainVariants = $this->generateDomainVariants($domain);
         
         foreach ($domainVariants as $variant) {
             if (isset($all[$variant])) {
@@ -576,11 +587,15 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     /**
      * Generate domain variants for a given domain.
      * 
-     * @param string $domain Base domain name
+     * @param string|null $domain Base domain name
      * @return array Array of domain variants
      */
-    private function generateDomainVariants(string $domain): array
+    private function generateDomainVariants(?string $domain): array
     {
+        if ($domain === null) {
+            return ['messages']; // Symfony default domain
+        }
+        
         return [
             $domain,                      // test.domain.one
             '@' . $domain,                // @test.domain.one
