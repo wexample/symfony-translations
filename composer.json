@@ -4,6 +4,9 @@
     "type": "library",
     "license": "MIT",
     "version": "1.0.26",
+    "keywords": [
+        "symfony-ux"
+    ],
     "autoload": {
         "psr-4": {
             "Wexample\\SymfonyTranslations\\": "src/"
