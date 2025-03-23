@@ -67,8 +67,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     final public const FILE_EXTENDS = '~extends';
 
-    protected array $domainsStack = [];
-
     private array $locales = [];
 
     /**
@@ -258,7 +256,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         return substr($domain, 1);
     }
 
-    function isTranslationLink(string $string): bool
+    function isIncludeReference(string $string): bool
     {
         return preg_match(
                 '/^'.self::DOMAIN_PREFIX.'[a-zA-Z_\-\.]+::([a-zA-Z_\-\.]+|'.self::DOMAIN_SAME_KEY_WILDCARD.')+$/',
@@ -279,7 +277,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $all = $catalogue->all();
         $output = [];
 
-        if ($this->isTranslationLink($value)) {
+        if ($this->isIncludeReference($value)) {
             $refDomain = $this->trimDomain($this->splitDomain($value));
             $refKey = $this->splitId($value);
             $shortNotation = self::DOMAIN_SAME_KEY_WILDCARD === $refKey;
@@ -349,26 +347,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         return $output;
     }
 
-    public function splitDomain(?string $id): ?string
-    {
-        if (strpos($id, self::DOMAIN_SEPARATOR)) {
-            return current(explode(self::DOMAIN_SEPARATOR, $id));
-        }
-
-        return null;
-    }
-
-    public function splitId(string $id): ?string
-    {
-        if (strpos($id, self::DOMAIN_SEPARATOR)) {
-            $exp = explode(self::DOMAIN_SEPARATOR, $id);
-
-            return end($exp);
-        }
-
-        return $id;
-    }
-
     public function transArray(
         array|string $id,
         array $parameters = [],
@@ -424,7 +402,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 $value = $all[$foundDomain][$id];
                 
                 // If the value is a translation link, resolve it
-                if ($this->isTranslationLink($value)) {
+                if ($this->isIncludeReference($value)) {
                     $refDomain = $this->trimDomain($this->splitDomain($value));
                     $refKey = $this->splitId($value);
                     
@@ -472,18 +450,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function updateParameters(array $parameters = []): array
     {
         return array_merge($this->parameters, $parameters);
-    }
-
-    public function resolveDomain(string $domain): ?string
-    {
-        if (str_starts_with($domain, self::DOMAIN_PREFIX)) {
-            $domainPart = $this->trimDomain($domain);
-            if (isset($this->domainsStack[$domainPart])) {
-                return $this->getDomain($domainPart);
-            }
-        }
-
-        return $domain;
     }
 
     public function getDomain(string $name): ?string
