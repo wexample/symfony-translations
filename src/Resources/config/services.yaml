@@ -5,7 +5,7 @@ services:
         public: false
 
     Wexample\SymfonyTranslations\:
-        resource: '../../{Service,Twig}'
+        resource: '../../{Command,Service,Twig}'
         tags: ['controller.service_arguments']
 
     # Override translation service.
