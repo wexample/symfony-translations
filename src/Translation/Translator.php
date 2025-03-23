@@ -37,8 +37,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     final public const string KEYS_SEPARATOR = FileHelper::EXTENSION_SEPARATOR;
 
-    final public const string DOMAIN_SAME_KEY_WILDCARD = '%';
-
     final public const string DOMAIN_TYPE_COMPONENT = VariableHelper::COMPONENT;
 
     final public const string DOMAIN_TYPE_FORM = VariableHelper::FORM;
