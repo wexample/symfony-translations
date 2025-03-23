@@ -42,9 +42,14 @@ class TranslationDebugExtension extends AbstractExtension
     /**
      * Dumps translation information for debugging purposes.
      */
-    public function dumpTranslations()
+    public function dumpTranslations(?string $locale = null)
     {
-        dump($this->translator->getCatalogues());
+        if ($locale) {
+            dump($this->translator->getCatalogue($locale));
+        }
+        else {
+            dump($this->translator->getCatalogues());
+        }
     }
 
     /**
