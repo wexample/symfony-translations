@@ -14,10 +14,9 @@ use Symfony\Component\Translation\TranslatorBagInterface;
 use Symfony\Contracts\Translation\LocaleAwareInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\Helpers\Helper\ClassHelper;
+use Wexample\PhpYaml\YamlIncludeResolver;
 use Wexample\SymfonyHelpers\Helper\FileHelper;
-use Wexample\Helpers\Helper\TextHelper;
 use Wexample\SymfonyHelpers\Helper\VariableHelper;
-use function array_filter;
 use function array_merge;
 use function array_pop;
 use function current;
@@ -30,33 +29,31 @@ use function is_null;
 use function pathinfo;
 use function str_replace;
 use function str_starts_with;
-use function strlen;
-use function strpos;
 use function substr;
 
 class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface
 {
-    final public const DOMAIN_SEPARATOR = ClassHelper::METHOD_SEPARATOR;
+    final public const string DOMAIN_SEPARATOR = ClassHelper::METHOD_SEPARATOR;
 
-    final public const DOMAIN_PREFIX = '@';
+    final public const string DOMAIN_PREFIX = '@';
 
-    final public const KEYS_SEPARATOR = FileHelper::EXTENSION_SEPARATOR;
+    final public const string KEYS_SEPARATOR = FileHelper::EXTENSION_SEPARATOR;
 
-    final public const DOMAIN_SAME_KEY_WILDCARD = '%';
+    final public const string DOMAIN_SAME_KEY_WILDCARD = '%';
 
-    final public const DOMAIN_TYPE_COMPONENT = VariableHelper::COMPONENT;
+    final public const string DOMAIN_TYPE_COMPONENT = VariableHelper::COMPONENT;
 
-    final public const DOMAIN_TYPE_FORM = VariableHelper::FORM;
+    final public const string DOMAIN_TYPE_FORM = VariableHelper::FORM;
 
-    final public const DOMAIN_TYPE_LAYOUT = VariableHelper::LAYOUT;
+    final public const string DOMAIN_TYPE_LAYOUT = VariableHelper::LAYOUT;
 
-    final public const DOMAIN_TYPE_PAGE = VariableHelper::PAGE;
+    final public const string DOMAIN_TYPE_PAGE = VariableHelper::PAGE;
 
-    final public const DOMAIN_TYPE_PDF = FileHelper::FILE_EXTENSION_PDF;
+    final public const string DOMAIN_TYPE_PDF = FileHelper::FILE_EXTENSION_PDF;
 
-    final public const DOMAIN_TYPE_VUE = FileHelper::FILE_EXTENSION_VUE;
+    final public const string DOMAIN_TYPE_VUE = FileHelper::FILE_EXTENSION_VUE;
 
-    final public const DOMAINS_DEFAULT = [
+    final public const array DOMAINS_DEFAULT = [
         self::DOMAIN_TYPE_COMPONENT,
         self::DOMAIN_TYPE_FORM,
         self::DOMAIN_TYPE_LAYOUT,
@@ -65,9 +62,14 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         self::DOMAIN_TYPE_VUE,
     ];
 
-    final public const FILE_EXTENDS = '~extends';
+    protected array $domainsStack = [];
 
     private array $locales = [];
+
+    /**
+     * YAML Include Resolver instance
+     */
+    private YamlIncludeResolver $yamlResolver;
 
     /**
      * @throws InvalidArgumentException|Exception
@@ -77,7 +79,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         private readonly array $parameters,
         KernelInterface $kernel,
         ParameterBagInterface $parameterBag,
-    ) {
+    )
+    {
+        // Initialize the YAML Include Resolver
+        $this->yamlResolver = new YamlIncludeResolver();
+
         $pathProject = $kernel->getProjectDir();
 
         // Merge all existing locales, fallbacks at end.
@@ -90,7 +96,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $pathTranslationsAll = $parameterBag->get('translations_paths') ?? [];
 
         // Add root translations
-        $pathTranslationsAll[] = $pathProject.'/translations';
+        $pathTranslationsAll[] = $pathProject . '/translations';
 
         foreach ($pathTranslationsAll as $aliasPrefix => $pathTranslations) {
             if (file_exists($pathTranslations)) {
@@ -107,7 +113,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function addTranslationDirectory(
         string $pathTranslations,
         ?string $aliasPrefix = null
-    ) {
+    )
+    {
         $it = new RecursiveDirectoryIterator(
             $pathTranslations
         );
@@ -137,9 +144,12 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 // Append file name
                 $domain[] = $exp[0];
                 $domain = implode(self::KEYS_SEPARATOR, $domain);
-                $domain = $aliasPrefix ? $aliasPrefix.'.'.$domain : self::DOMAIN_PREFIX . $domain;
+                $domain = $aliasPrefix ? $aliasPrefix . '.' . $domain : self::DOMAIN_PREFIX . $domain;
 
                 $this->addLocale($exp[1]);
+
+                // Register the YAML file with the resolver
+                $this->yamlResolver->registerFile($domain, $file);
 
                 $this->translator->addResource(
                     $info->extension,
@@ -203,12 +213,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         array $translations,
         string $domain,
         string $locale
-    ): array {
-        $translations = $this->resolveExtend(
-            $translations,
-            $locale,
-            $domain
-        );
+    ): array
+    {
         $resolved = [];
 
         foreach ($translations as $key => $value) {
@@ -223,43 +229,15 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         return $resolved;
     }
 
-    /**
-     * @throws Exception
-     */
-    public function resolveExtend(
-        array $translations,
-        string $locale,
-        string $currentDomain = null
-    ): array {
-        $catalogue = $this->translator->getCatalogue($locale);
-        $all = $catalogue->all();
-
-        if (isset($translations[static::FILE_EXTENDS])) {
-            $extendsDomainRaw = $this->trimDomain($translations[static::FILE_EXTENDS]);
-            unset($translations[static::FILE_EXTENDS]);
-
-            $extendsDomain = $this->findMatchingDomainVariant($extendsDomainRaw, $all);
-
-            if ($extendsDomain) {
-                return $translations + $this->resolveExtend($all[$extendsDomain], $locale, $extendsDomain);
-            }
-
-            throw new Exception('Unable to extend translations. Domain does not exists : '.$extendsDomainRaw
-                .'. Existing domains are: '.TextHelper::toList(array_keys($all)));
-        }
-
-        return $translations;
-    }
-
     public function trimDomain(string $domain): string
     {
         return substr($domain, 1);
     }
 
-    function isIncludeReference(string $string): bool
+    function isTranslationLink(string $string): bool
     {
         return preg_match(
-                '/^'.self::DOMAIN_PREFIX.'[a-zA-Z_\-\.]+::([a-zA-Z_\-\.]+|'.self::DOMAIN_SAME_KEY_WILDCARD.')+$/',
+                '/^' . self::DOMAIN_PREFIX . '[a-zA-Z_\-\.]+::([a-zA-Z_\-\.]+|' . self::DOMAIN_SAME_KEY_WILDCARD . ')+$/',
                 $string
             ) === 1;
     }
@@ -272,65 +250,20 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $value,
         string $domain,
         string $locale
-    ): array {
+    ): array
+    {
         $catalogue = $this->translator->getCatalogue($locale);
-        $all = $catalogue->all();
         $output = [];
 
-        if ($this->isIncludeReference($value)) {
-            $refDomain = $this->trimDomain($this->splitDomain($value));
-            $refKey = $this->splitId($value);
-            $shortNotation = self::DOMAIN_SAME_KEY_WILDCARD === $refKey;
+        if ($this->isTranslationLink($value)) {
+            // Use the YAML resolver to get the value
+            $resolvedValue = $this->yamlResolver->getValue($value);
 
-            if ($shortNotation) {
-                $refKey = $key;
-            }
-
-            $items = [];
-
-            $foundDomain = $this->findMatchingDomainVariant($refDomain, $all);
-            // If no matching domain found, use the original reference domain
-            // This will likely fail later, but it's consistent with the original behavior
-            if (!$foundDomain) {
-                $foundDomain = $refDomain;
-            }
-
-            // Found the exact referenced key.
-            if ($foundDomain && isset($all[$foundDomain][$refKey])) {
-                $items = $this->resolveCatalogItem(
-                    $refKey,
-                    $all[$foundDomain][$refKey],
-                    $foundDomain,
-                    $locale
-                );
+            // If the resolved value is the same as the original value, it means the reference wasn't found
+            if ($resolvedValue === $value) {
+                $output[$key] = $value;
             } else {
-                $subTranslations = array_filter(
-                    $all[$foundDomain] ?? [],
-                    fn($key): bool => str_starts_with($key, $refKey.self::KEYS_SEPARATOR),
-                    ARRAY_FILTER_USE_KEY
-                );
-
-                $items += $this->resolveCatalogTranslations(
-                    $subTranslations,
-                    $foundDomain,
-                    $locale
-                );
-            }
-
-            foreach ($items as $outputKey => $outputValue) {
-                $keyDiff = $key;
-                $prefix = $refKey.self::KEYS_SEPARATOR;
-
-                if (str_starts_with($outputKey, $prefix)) {
-                    $keyDiff = $key.self::KEYS_SEPARATOR
-                        .substr(
-                            $outputKey,
-                            strlen($prefix)
-                        );
-                }
-
-                $output[$keyDiff]
-                    = $outputValue;
+                $output[$key] = $resolvedValue;
             }
         } else {
             $output[$key] = $value;
@@ -353,7 +286,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $separator = '',
         string $domain = null,
         string $locale = null
-    ): string {
+    ): string
+    {
         if (is_array($id)) {
             $output = [];
 
@@ -377,59 +311,48 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         array $parameters = [],
         string $domain = null,
         string $locale = null
-    ): string {
+    ): string
+    {
         $parameters = $this->updateParameters($parameters);
         $default = $id;
 
+        // Use the YAML resolver to get the value if it's a reference
+        if ($this->isTranslationLink($id)) {
+            $resolvedValue = $this->yamlResolver->getValue($id);
+            if ($resolvedValue !== $id) {
+                return $resolvedValue;
+            }
+        }
+
         // Extract domain from the ID if not provided explicitly
-        if (is_null($domain) && $domain = $this->splitDomain($id)) {
-            $id = $this->splitId($id);
-            $domain = $this->resolveDomain($domain);
+        if (is_null($domain) && $domain = $this->yamlResolver->splitDomain($id)) {
+            $id = $this->yamlResolver->splitKey(key:$id);
 
             if ($domain) {
-                $default = $domain.static::DOMAIN_SEPARATOR.$id;
+                $default = $domain . static::DOMAIN_SEPARATOR . $id;
             }
         }
 
         $catalogue = $this->translator->getCatalogue($locale);
         $all = $catalogue->all();
-        
-        // Try to find the domain in the catalogue
-        $foundDomain = $this->findMatchingDomainVariant($domain, $all);
 
-        if ($foundDomain) {
-            if (isset($all[$foundDomain][$id])) {
-                $value = $all[$foundDomain][$id];
-                
-                // If the value is a translation link, resolve it
-                if ($this->isIncludeReference($value)) {
-                    $refDomain = $this->trimDomain($this->splitDomain($value));
-                    $refKey = $this->splitId($value);
-                    
-                    // Check if the referenced key exists in any domain variant
-                    $refExists = false;
-                    $refDomainVariants = $this->generateDomainVariants($refDomain);
-                    
-                    foreach ($refDomainVariants as $refVariant) {
-                        if (isset($all[$refVariant]) && isset($all[$refVariant][$refKey])) {
-                            $refExists = true;
-                            break;
-                        }
+        if ($domain) {
+            if (isset($all[$domain][$id])) {
+                $value = $all[$domain][$id];
+
+                // If the value is a translation link, resolve it using the YAML resolver
+                if ($this->isTranslationLink($value)) {
+                    $resolvedValue = $this->yamlResolver->getValue($value);
+                    if ($resolvedValue !== $value) {
+                        return $resolvedValue;
                     }
-                    
-                    // If the referenced key doesn't exist, return the original link
-                    if (!$refExists) {
-                        return $value;
-                    }
-                    
-                    // Otherwise, recursively translate the referenced key
-                    return $this->trans($refKey, $parameters, $refDomain, $locale);
+                    return $value;
                 }
-                
+
                 return $value;
             }
         }
-        
+
         // If not found, return the full id to ease fixing.
         return $this
             ->translator
@@ -452,6 +375,18 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         return array_merge($this->parameters, $parameters);
     }
 
+    public function resolveDomain(string $domain): ?string
+    {
+        if (str_starts_with($domain, self::DOMAIN_PREFIX)) {
+            $domainPart = $this->trimDomain($domain);
+            if (isset($this->domainsStack[$domainPart])) {
+                return $this->getDomain($domainPart);
+            }
+        }
+
+        return $domain;
+    }
+
     public function getDomain(string $name): ?string
     {
         return empty($this->domainsStack[$name]) ?
@@ -462,7 +397,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function setDomainFromPath(
         string $name,
         string $path
-    ): string {
+    ): string
+    {
         $domain = Translator::buildDomainFromPath($path);
 
         $this->setDomain($name, $domain);
@@ -481,8 +417,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     self::KEYS_SEPARATOR,
                     $info->dirname
                 )
-                .self::KEYS_SEPARATOR
-                .current(
+                . self::KEYS_SEPARATOR
+                . current(
                     explode(self::KEYS_SEPARATOR, $info->basename)
                 );
         } else {
@@ -493,7 +429,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function setDomain(
         string $name,
         string $value
-    ): void {
+    ): void
+    {
         $this->domainsStack[$name][] = $value;
     }
 
@@ -522,7 +459,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         foreach ($messages as $domain => $translations) {
             foreach ($translations as $id => $translation) {
                 if (preg_match($regex, $id)) {
-                    $filtered[$domain.self::DOMAIN_SEPARATOR.$id] = $translation;
+                    $filtered[$domain . self::DOMAIN_SEPARATOR . $id] = $translation;
                 }
             }
         }
@@ -532,51 +469,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function buildRegexForFilterKey(string $key): string
     {
-        return '/^'.str_replace('*', '.*', $key).'$/';
-    }
-
-    /**
-     * Generate domain variants and find the first matching one in the catalogue.
-     * 
-     * @param string|null $domain Base domain name
-     * @param array $all All domains from the catalogue
-     * @return string|null Found domain variant or null if not found
-     */
-    private function findMatchingDomainVariant(?string $domain, array $all): ?string
-    {
-        if ($domain === null) {
-            // If domain is null, try to use 'messages' (Symfony default domain)
-            return isset($all['messages']) ? 'messages' : null;
-        }
-        
-        // Try different variants of domain name to find the right one
-        $domainVariants = $this->generateDomainVariants($domain);
-        
-        foreach ($domainVariants as $variant) {
-            if (isset($all[$variant])) {
-                return $variant;
-            }
-        }
-        
-        return null;
-    }
-
-    /**
-     * Generate domain variants for a given domain.
-     * 
-     * @param string|null $domain Base domain name
-     * @return array Array of domain variants
-     */
-    private function generateDomainVariants(?string $domain): array
-    {
-        if ($domain === null) {
-            return ['messages']; // Symfony default domain
-        }
-        
-        return [
-            $domain,                      // test.domain.one
-            '@' . $domain,                // @test.domain.one
-            '@translations.' . $domain     // @translations.test.domain.one
-        ];
+        return '/^' . str_replace('*', '.*', $key) . '$/';
     }
 }
