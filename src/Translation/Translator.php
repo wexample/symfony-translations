@@ -278,10 +278,18 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $locale = null
     ): string
     {
-        return $this->yamlResolver->getValue(
+        $translatedValue = $this->yamlResolver->getValue(
             key: $this->yamlResolver->splitKey($id),
             domain: $this->resolveDomain($this->yamlResolver->splitDomain($id))
         );
+
+        if (!empty($parameters)) {
+            foreach ($parameters as $key => $value) {
+                $translatedValue = str_replace('{' . $key . '}', (string) $value, $translatedValue);
+            }
+        }
+        
+        return $translatedValue;
     }
 
     public function updateParameters(array $parameters = []): array
