@@ -2,8 +2,6 @@
 
 namespace Wexample\SymfonyTranslations\Test;
 
-use Twig\TwigFunction;
-use Wexample\SymfonyHelpers\Twig\AbstractExtension;
 use Wexample\SymfonyTesting\Tests\AbstractApplicationTestCase;
 use Wexample\SymfonyTranslations\Translation\Translator;
 

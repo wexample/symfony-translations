@@ -2,8 +2,6 @@
 
 namespace Wexample\SymfonyTranslations\Command;
 
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Style\SymfonyStyle;
 use Wexample\SymfonyHelpers\Command\AbstractBundleCommand;
 use Wexample\SymfonyHelpers\Service\BundleService;
 use Wexample\SymfonyTranslations\Translation\Translator;

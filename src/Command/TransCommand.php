@@ -25,13 +25,14 @@ class TransCommand extends AbstractTranslationCommand
     protected function execute(
         InputInterface $input,
         OutputInterface $output
-    ): int {
+    ): int
+    {
         $io = new SymfonyStyle($input, $output);
         $key = $input->getArgument('key');
         $locale = $input->getArgument('locale');
         $domain = $input->getOption('domain');
         $parametersJson = $input->getOption('parameters');
-        
+
         try {
             $parameters = json_decode($parametersJson, true, 512, JSON_THROW_ON_ERROR);
             if (!is_array($parameters)) {
@@ -41,26 +42,26 @@ class TransCommand extends AbstractTranslationCommand
             $io->error('Invalid JSON for parameters: ' . $e->getMessage());
             return Command::FAILURE;
         }
-        
+
         // Check if the locale exists
         $availableLocales = $this->translator->getAllLocales();
         if (!in_array($locale, $availableLocales)) {
             $io->error(sprintf('Locale "%s" not found. Available locales: %s', $locale, implode(', ', $availableLocales)));
             return Command::FAILURE;
         }
-        
+
         // Translate the key
         $translation = $this->translator->trans($key, $parameters, $domain, $locale);
-        
+
         // If the translation is the same as the key, it might not be translated
         if ($translation === $key) {
             $io->note(sprintf('No translation found for key "%s" in domain "%s" for locale "%s"', $key, $domain, $locale));
         }
-        
+
         $io->title(sprintf('Translation for key "%s" in locale "%s"', $key, $locale));
         $io->section('Domain: ' . $domain);
         $io->writeln($translation);
-        
+
         return Command::SUCCESS;
     }
 }
