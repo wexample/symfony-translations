@@ -4,9 +4,17 @@ namespace Wexample\SymfonyTranslations\Twig;
 
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
+use Wexample\SymfonyTranslations\Translation\Translator;
 
 class TranslationDebugExtension extends AbstractExtension
 {
+    public function __construct(
+        private readonly Translator $translator
+    )
+    {
+
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -20,10 +28,15 @@ class TranslationDebugExtension extends AbstractExtension
     /**
      * Dumps translation information for debugging purposes.
      *
-     * @return array Empty array for now, will be enhanced later
+     * @param string|null $key Optional translation key to debug specifically
+     * @return string HTML output with debug information
      */
-    public function dumpTranslations(): array
+    public function dumpTranslations(?string $key = null)
     {
-        return [];
+        $debugInfo = [
+            'test' => 'ok',
+        ];
+
+        return '<pre>' . print_r($debugInfo, true) . '</pre>';
     }
 }
