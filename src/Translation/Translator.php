@@ -222,7 +222,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
         if ($this->yamlResolver->isIncludeReference($value)) {
             // Use the YAML resolver to get the value
-            $resolvedValue = $this->yamlResolver->getValue($value);
+            $resolvedValue = $this->yamlResolver->getValueResolved($value);
 
             // If the resolved value is the same as the original value, it means the reference wasn't found
             if ($resolvedValue === $value) {
@@ -283,7 +283,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
         // Use the YAML resolver to get the value if it's a reference
         if ($this->yamlResolver->isIncludeReference($id)) {
-            $resolvedValue = $this->yamlResolver->getValue($id);
+            $resolvedValue = $this->yamlResolver->getValueResolved($id);
             if ($resolvedValue !== $id) {
                 return $resolvedValue;
             }
@@ -307,7 +307,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
                 // If the value is a translation link, resolve it using the YAML resolver
                 if ($this->yamlResolver->isIncludeReference($value)) {
-                    $resolvedValue = $this->yamlResolver->getValue($value);
+                    $resolvedValue = $this->yamlResolver->getValueResolved($value);
                     if ($resolvedValue !== $value) {
                         return $resolvedValue;
                     }
