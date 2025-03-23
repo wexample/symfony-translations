@@ -35,7 +35,6 @@ class DebugCommand extends AbstractBundleCommand
         $this
             ->addArgument('locale', InputArgument::REQUIRED, 'The locale to debug')
             ->addOption('domain', 'd', InputOption::VALUE_OPTIONAL, 'The domain to filter by')
-            ->addOption('references', 'r', InputOption::VALUE_NONE, 'Show only translation references')
             ->addOption('format', 'f', InputOption::VALUE_OPTIONAL, 'Output format (table, json)', 'table');
     }
 
@@ -47,17 +46,15 @@ class DebugCommand extends AbstractBundleCommand
         $io = new SymfonyStyle($input, $output);
         $locale = $input->getArgument('locale');
         $domain = $input->getOption('domain');
-        $showOnlyReferences = $input->getOption('references');
         $format = $input->getOption('format');
 
-        return $this->displayTranslations($io, $locale, $domain, $showOnlyReferences, $format);
+        return $this->displayTranslations($io, $locale, $domain, $format);
     }
 
     private function displayTranslations(
         SymfonyStyle $io,
         string $locale,
         ?string $domain,
-        bool $showOnlyReferences,
         string $format
     ): int
     {
@@ -88,7 +85,7 @@ class DebugCommand extends AbstractBundleCommand
             }
 
             $io->section(sprintf('Domain: %s', $domainName));
-            $this->displayTranslationsTable($io, $translations, $showOnlyReferences);
+            $this->displayTranslationsTable($io, $translations);
         }
 
         return Command::SUCCESS;
@@ -111,7 +108,7 @@ class DebugCommand extends AbstractBundleCommand
         }
 
         if (empty($rows)) {
-            $io->writeln('No matching translations found');
+            $io->writeln('No translations found');
             return;
         }
 
