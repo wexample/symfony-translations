@@ -3,11 +3,9 @@
 namespace Wexample\SymfonyTranslations\Translation;
 
 use Exception;
-use Psr\Cache\InvalidArgumentException;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
+use InvalidArgumentException;
+use SplFileInfo;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Translation\MessageCatalogueInterface;
 use Symfony\Component\Translation\TranslatorBagInterface;
@@ -98,66 +96,47 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // Add root translations
         $pathTranslationsAll[] = $pathProject . '/translations';
 
-        foreach ($pathTranslationsAll as $aliasPrefix => $pathTranslations) {
-            if (file_exists($pathTranslations)) {
-                $this->addTranslationDirectory(
-                    $pathTranslations,
-                    str_starts_with($aliasPrefix, '@') ? $aliasPrefix : null
-                );
-            }
-        }
+        $this->addTranslationDirectories($pathTranslationsAll);
 
         $this->resolveCatalog();
     }
 
-    public function addTranslationDirectory(
-        string $pathTranslations,
-        ?string $aliasPrefix = null
+    public function addTranslationDirectories(
+        array $directories
     )
     {
-        $it = new RecursiveDirectoryIterator(
-            $pathTranslations
-        );
-
-        /** @var SplFileInfo $file */
-        foreach (new RecursiveIteratorIterator($it) as $file) {
-            $info = (object) pathinfo($file);
-
-            if (FileHelper::FILE_EXTENSION_YML === $info->extension) {
-                $exp = explode(FileHelper::EXTENSION_SEPARATOR, $info->filename);
-
-                $subDir = FileHelper::buildRelativePath(
-                    $info->dirname,
-                    dirname($pathTranslations)
-                );
-
-                $domain = [];
-                // There is a subdirectory
-                // (allow translation files at dir root)
-                if (VariableHelper::_EMPTY_STRING !== $subDir) {
-                    $domain = explode(
-                        '/',
-                        $subDir
-                    );
-                }
-
-                // Append file name
-                $domain[] = $exp[0];
-                $domain = implode(self::KEYS_SEPARATOR, $domain);
-                $domain = $aliasPrefix ? $aliasPrefix . '.' . $domain : self::DOMAIN_PREFIX . $domain;
-
-                $this->addLocale($exp[1]);
-
-                // Register the YAML file with the resolver
-                $this->yamlResolver->registerFile($domain, $file);
-
-                $this->translator->addResource(
-                    $info->extension,
-                    $file,
-                    $exp[1],
-                    $domain
+        foreach ($directories as $pathTranslations) {
+            if (file_exists($pathTranslations)) {
+                $this->addTranslationDirectory(
+                    $pathTranslations
                 );
             }
+        }
+    }
+
+    public function addTranslationDirectory(
+        string $directory
+    )
+    {
+        // Use the YamlIncludeResolver to scan the directory and register files
+        $registeredFiles = $this->yamlResolver->scanDirectory($directory);
+
+        // Add the registered files as resources to the Symfony translator
+        /** @var SplFileInfo $fileInfo */
+        foreach ($registeredFiles as $fileInfo) {
+            $exp = explode(FileHelper::EXTENSION_SEPARATOR, $fileInfo->getFilename());
+
+            $locale = $exp[1];
+            // Add the locale to our list of available locales
+            $this->addLocale($locale);
+
+            // Add the file as a resource to the Symfony translator
+            $this->translator->addResource(
+                $fileInfo->getExtension(),
+                $fileInfo->getRealPath(),
+                $locale,
+                $this->yamlResolver->buildDomainFromFile($fileInfo, $directory)
+            );
         }
     }
 
@@ -326,7 +305,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
         // Extract domain from the ID if not provided explicitly
         if (is_null($domain) && $domain = $this->yamlResolver->splitDomain($id)) {
-            $id = $this->yamlResolver->splitKey(key:$id);
+            $id = $this->yamlResolver->splitKey(key: $id);
 
             if ($domain) {
                 $default = $domain . static::DOMAIN_SEPARATOR . $id;
