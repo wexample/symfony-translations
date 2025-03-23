@@ -194,15 +194,13 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $locale
     ): array
     {
-        $resolved = [];
-
-        foreach ($translations as $key => $value) {
-            $resolved += $this->resolveCatalogItem(
-                $key,
-                $value,
-                $domain,
-                $locale
-            );
+        // Utiliser la nouvelle méthode resolveValues du YamlIncludeResolver pour résoudre les références
+        $resolved = $this->yamlResolver->resolveValues($translations, $domain);
+        
+        // Mettre à jour le catalogue avec les valeurs résolues
+        $catalogue = $this->translator->getCatalogue($locale);
+        foreach ($resolved as $key => $value) {
+            $catalogue->set($key, $value, $domain);
         }
 
         return $resolved;
@@ -211,14 +209,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function trimDomain(string $domain): string
     {
         return substr($domain, 1);
-    }
-
-    function isTranslationLink(string $string): bool
-    {
-        return preg_match(
-                '/^' . self::DOMAIN_PREFIX . '[a-zA-Z_\-\.]+::([a-zA-Z_\-\.]+|' . self::DOMAIN_SAME_KEY_WILDCARD . ')+$/',
-                $string
-            ) === 1;
     }
 
     /**
@@ -234,7 +224,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $catalogue = $this->translator->getCatalogue($locale);
         $output = [];
 
-        if ($this->isTranslationLink($value)) {
+        if ($this->yamlResolver->isIncludeReference($value)) {
             // Use the YAML resolver to get the value
             $resolvedValue = $this->yamlResolver->getValue($value);
 
@@ -296,7 +286,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $default = $id;
 
         // Use the YAML resolver to get the value if it's a reference
-        if ($this->isTranslationLink($id)) {
+        if ($this->yamlResolver->isIncludeReference($id)) {
             $resolvedValue = $this->yamlResolver->getValue($id);
             if ($resolvedValue !== $id) {
                 return $resolvedValue;
@@ -320,7 +310,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 $value = $all[$domain][$id];
 
                 // If the value is a translation link, resolve it using the YAML resolver
-                if ($this->isTranslationLink($value)) {
+                if ($this->yamlResolver->isIncludeReference($value)) {
                     $resolvedValue = $this->yamlResolver->getValue($value);
                     if ($resolvedValue !== $value) {
                         return $resolvedValue;
@@ -379,9 +369,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     ): string
     {
         $domain = Translator::buildDomainFromPath($path);
-
         $this->setDomain($name, $domain);
-
         return $domain;
     }
 
