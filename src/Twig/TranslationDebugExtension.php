@@ -2,8 +2,8 @@
 
 namespace Wexample\SymfonyTranslations\Twig;
 
-use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
+use Wexample\SymfonyHelpers\Twig\AbstractExtension;
 use Wexample\SymfonyTranslations\Translation\Translator;
 
 class TranslationDebugExtension extends AbstractExtension
@@ -21,22 +21,19 @@ class TranslationDebugExtension extends AbstractExtension
     public function getFunctions(): array
     {
         return [
-            new TwigFunction('dump_trans', [$this, 'dumpTranslations'], ['is_safe' => ['html']]),
+            new TwigFunction(
+                'dump_trans',
+                [$this, 'dumpTranslations'],
+                [self::FUNCTION_OPTION_HTML]
+            ),
         ];
     }
 
     /**
      * Dumps translation information for debugging purposes.
-     *
-     * @param string|null $key Optional translation key to debug specifically
-     * @return string HTML output with debug information
      */
-    public function dumpTranslations(?string $key = null)
+    public function dumpTranslations()
     {
-        $debugInfo = [
-            'test' => 'ok',
-        ];
-
-        return '<pre>' . print_r($debugInfo, true) . '</pre>';
+        dump($this->translator->getCatalogues());
     }
 }
