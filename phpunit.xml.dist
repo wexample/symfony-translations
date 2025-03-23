@@ -4,6 +4,11 @@
          bootstrap="vendor/autoload.php"
          colors="true"
          verbose="true">
+    <php>
+        <env name="KERNEL_CLASS" value="Wexample\SymfonyTesting\TestKernel" />
+        <env name="APP_ENV" value="test" />
+        <env name="APP_DEBUG" value="1" />
+    </php>
     <testsuites>
         <testsuite name="Wexample Symfony Translations Test Suite">
             <directory>tests</directory>

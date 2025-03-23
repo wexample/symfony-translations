@@ -12,6 +12,11 @@
             "Wexample\\SymfonyTranslations\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Wexample\\SymfonyTranslations\\Tests\\": "tests/"
+        }
+    },
     "authors": [
         {
             "name": "weeger",
