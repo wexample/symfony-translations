@@ -194,10 +194,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $locale
     ): array
     {
-        // Utiliser la nouvelle méthode resolveValues du YamlIncludeResolver pour résoudre les références
         $resolved = $this->yamlResolver->resolveValues($translations, $domain);
         
-        // Mettre à jour le catalogue avec les valeurs résolues
         $catalogue = $this->translator->getCatalogue($locale);
         foreach ($resolved as $key => $value) {
             $catalogue->set($key, $value, $domain);
