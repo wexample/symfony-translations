@@ -23,33 +23,6 @@ abstract class AbstractTranslationCommand extends AbstractBundleCommand
         );
     }
 
-    protected function displayTranslationsTable(
-        SymfonyStyle $io,
-        array $translations
-    ): void
-    {
-        $rows = [];
-        $index = 1;
-
-        foreach ($translations as $key => $value) {
-            $rows[] = [
-                $index++,
-                $key,
-                is_array($value) ? json_encode($value) : $value,
-            ];
-        }
-
-        if (empty($rows)) {
-            $io->writeln('No translations found');
-            return;
-        }
-
-        $table = new Table($io);
-        $table->setHeaders(['#', 'Key', 'Value']);
-        $table->setRows($rows);
-        $table->render();
-    }
-
     public static function getBundleClassName(): string
     {
         return WexampleSymfonyTranslationsBundle::class;

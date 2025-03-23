@@ -3,6 +3,7 @@
 namespace Wexample\SymfonyTranslations\Command;
 
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -23,7 +24,8 @@ class CatalogueCommand extends AbstractTranslationCommand
     protected function execute(
         InputInterface $input,
         OutputInterface $output
-    ): int {
+    ): int
+    {
         $io = new SymfonyStyle($input, $output);
         $locale = $input->getArgument('locale');
         $domain = $input->getOption('domain');
@@ -35,7 +37,8 @@ class CatalogueCommand extends AbstractTranslationCommand
         SymfonyStyle $io,
         string $locale,
         ?string $domain
-    ): int {
+    ): int
+    {
         $catalogue = $this->translator->getCatalogue($locale);
 
         if (!$catalogue) {
@@ -62,5 +65,32 @@ class CatalogueCommand extends AbstractTranslationCommand
         }
 
         return Command::SUCCESS;
+    }
+
+    protected function displayTranslationsTable(
+        SymfonyStyle $io,
+        array $translations
+    ): void
+    {
+        $rows = [];
+        $index = 1;
+
+        foreach ($translations as $key => $value) {
+            $rows[] = [
+                $index++,
+                $key,
+                is_array($value) ? json_encode($value) : $value,
+            ];
+        }
+
+        if (empty($rows)) {
+            $io->writeln('No translations found');
+            return;
+        }
+
+        $table = new Table($io);
+        $table->setHeaders(['#', 'Key', 'Value']);
+        $table->setRows($rows);
+        $table->render();
     }
 }
