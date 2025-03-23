@@ -13,6 +13,7 @@ use Symfony\Contracts\Translation\LocaleAwareInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\PhpYaml\YamlIncludeResolver;
+use Wexample\SymfonyDesignSystem\Helper\TemplateHelper;
 use Wexample\SymfonyHelpers\Helper\FileHelper;
 use Wexample\SymfonyHelpers\Helper\VariableHelper;
 use function array_merge;
@@ -23,7 +24,6 @@ use function explode;
 use function file_exists;
 use function implode;
 use function is_array;
-use function is_null;
 use function pathinfo;
 use function str_replace;
 use function str_starts_with;
@@ -278,61 +278,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $locale = null
     ): string
     {
-        $parameters = $this->updateParameters($parameters);
-        $default = $id;
-
-        // Use the YAML resolver to get the value if it's a reference
-        if ($this->yamlResolver->isIncludeReference($id)) {
-            $resolvedValue = $this->yamlResolver->getValueResolved($id);
-            if ($resolvedValue !== $id) {
-                return $resolvedValue;
-            }
-        }
-
-        // Extract domain from the ID if not provided explicitly
-        if (is_null($domain) && $domain = $this->yamlResolver->splitDomain($id)) {
-            $id = $this->yamlResolver->splitKey(key: $id);
-
-            if ($domain) {
-                $default = $domain . static::DOMAIN_SEPARATOR . $id;
-            }
-        }
-
-        $catalogue = $this->translator->getCatalogue($locale);
-        $all = $catalogue->all();
-
-        if ($domain) {
-            if (isset($all[$domain][$id])) {
-                $value = $all[$domain][$id];
-
-                // If the value is a translation link, resolve it using the YAML resolver
-                if ($this->yamlResolver->isIncludeReference($value)) {
-                    $resolvedValue = $this->yamlResolver->getValueResolved($value);
-                    if ($resolvedValue !== $value) {
-                        return $resolvedValue;
-                    }
-                    return $value;
-                }
-
-                return $value;
-            }
-        }
-
-        // If not found, return the full id to ease fixing.
-        return $this
-            ->translator
-            ->getCatalogue()
-            ->has($id, $domain ?: 'messages')
-
-            ? $this
-                ->translator
-                ->trans(
-                    $id,
-                    $parameters,
-                    $domain ?: 'messages',
-                    $locale
-                )
-            : $default;
+        return $this->yamlResolver->getValue(
+            key: $this->yamlResolver->splitKey($id),
+            domain: $this->resolveDomain($this->yamlResolver->splitDomain($id))
+        );
     }
 
     public function updateParameters(array $parameters = []): array
@@ -342,7 +291,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function resolveDomain(string $domain): ?string
     {
-        if (str_starts_with($domain, self::DOMAIN_PREFIX)) {
+        if (str_starts_with($domain, needle: YamlIncludeResolver::DOMAIN_PREFIX)) {
             $domainPart = $this->trimDomain($domain);
             if (isset($this->domainsStack[$domainPart])) {
                 return $this->getDomain($domainPart);
@@ -364,7 +313,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $path
     ): string
     {
-        $domain = Translator::buildDomainFromPath($path);
+        $domain = Translator::buildDomainFromPath(
+            TemplateHelper::trimPathPrefix($path)
+        );
+
         $this->setDomain($name, $domain);
         return $domain;
     }
