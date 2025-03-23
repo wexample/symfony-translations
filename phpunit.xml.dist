@@ -5,7 +5,7 @@
          colors="true"
          verbose="true">
     <php>
-        <env name="KERNEL_CLASS" value="Wexample\SymfonyTesting\TestKernel" />
+        <env name="KERNEL_CLASS" value="Wexample\SymfonyTesting\Tests\TestKernel" />
         <env name="APP_ENV" value="test" />
         <env name="APP_DEBUG" value="1" />
     </php>
