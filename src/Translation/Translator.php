@@ -193,7 +193,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     ): array
     {
         $resolved = $this->yamlResolver->resolveValues($translations, $domain);
-        
+
         $catalogue = $this->translator->getCatalogue($locale);
         foreach ($resolved as $key => $value) {
             $catalogue->set($key, $value, $domain);
@@ -433,5 +433,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function buildRegexForFilterKey(string $key): string
     {
         return '/^' . str_replace('*', '.*', $key) . '$/';
+    }
+
+    public function getDomainsStack(): array
+    {
+        return $this->domainsStack;
     }
 }
