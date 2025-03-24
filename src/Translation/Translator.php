@@ -42,6 +42,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * Translation paths
      */
     private array $translationPaths = [];
+    
+    /**
+     * YAML resolver for handling includes and references
+     */
+    private YamlIncludeResolver $yamlResolver;
 
     /**
      * @throws InvalidArgumentException|Exception
@@ -52,6 +57,9 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         private readonly ParameterBagInterface $parameterBag,
     )
     {
+        // Initialize the YAML resolver
+        $this->yamlResolver = new YamlIncludeResolver();
+        
         // Initialize locales from the Symfony translator
         $this->addLocale($this->getLocale());
 
