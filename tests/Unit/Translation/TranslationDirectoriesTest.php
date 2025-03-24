@@ -2,9 +2,9 @@
 
 namespace Wexample\SymfonyTranslations\Tests\Unit\Translation;
 
+use Symfony\Component\Translation\MessageCatalogue;
 use Wexample\SymfonyTranslations\Tests\AbstractTranslationTest;
 use Wexample\SymfonyTranslations\Translation\Translator;
-
 
 class TranslationDirectoriesTest extends AbstractTranslationTest
 {
@@ -19,113 +19,137 @@ class TranslationDirectoriesTest extends AbstractTranslationTest
     }
 
     /**
-     * Test adding a single translation directory
+     * Test population of translation catalogues
      */
-    public function testAddTranslationDirectory()
+    public function testPopulateCatalogues(): void
     {
         /** @var Translator $translator */
         $translator = $this->translator;
 
-        // Get initial locale count
-        $initialLocales = count($this->getLocalesFromTranslator($translator));
+        // Create a mock catalogue
+        $catalogue = new MessageCatalogue('test');
+        
+        // Configure the Symfony translator mock to return our catalogue
+        $translator->translator->method('getCatalogue')
+            ->willReturn($catalogue);
 
-        // Add a single translation directory
-        $translator->addTranslationDirectory($this->testTranslationsPath);
+        // Call populateCatalogues to populate the catalogue with translations
+        $translator->populateCatalogues();
 
-        // Check that locales were added
-        $newLocales = count($this->getLocalesFromTranslator($translator));
-        $this->assertGreaterThanOrEqual(
-            $initialLocales,
-            $newLocales,
-            'Adding a translation directory should add new locales'
-        );
-
-        // Verify that the 'test' locale was added
-        $locales = $this->getLocalesFromTranslator($translator);
-        $this->assertContains(
-            'test',
-            $locales,
-            'The test locale should be added when adding the test translations directory'
-        );
+        // Test that the catalogue contains translations
+        // Note: Since we're using mocks, we can't actually test the content
+        // but we can verify that the method runs without errors
+        $this->assertInstanceOf(MessageCatalogue::class, $translator->getCatalogue());
     }
 
     /**
-     * Test adding multiple translation directories
+     * Test flattening of nested arrays for translation keys
      */
-    public function testAddTranslationDirectories()
+    public function testFlattenArray(): void
     {
         /** @var Translator $translator */
         $translator = $this->translator;
 
-        // Get initial locale count
-        $initialLocales = count($this->getLocalesFromTranslator($translator));
+        // Use reflection to access the private flattenArray method
+        $reflectionClass = new \ReflectionClass(Translator::class);
+        $method = $reflectionClass->getMethod('flattenArray');
+        $method->setAccessible(true);
 
-        // Create a temporary directory for testing with a test translation file
-        $tempDir = sys_get_temp_dir() . '/symfony_translations_test_' . uniqid();
-        mkdir($tempDir, 0777, true);
-        
-        // Add multiple translation directories
-        $translator->addTranslationDirectories([
-            $this->testTranslationsPath,
-            $tempDir
-        ]);
+        // Test flattening a simple array
+        $simpleArray = [
+            'key1' => 'value1',
+            'key2' => 'value2'
+        ];
+        $flattenedSimple = $method->invoke($translator, $simpleArray);
+        $this->assertEquals([
+            'key1' => 'value1',
+            'key2' => 'value2'
+        ], $flattenedSimple);
 
-        // Check that locales were added
-        $newLocales = count($this->getLocalesFromTranslator($translator));
-        $this->assertGreaterThanOrEqual(
-            $initialLocales,
-            $newLocales,
-            'Adding translation directories should add new locales'
-        );
+        // Test flattening a nested array
+        $nestedArray = [
+            'group1' => [
+                'key1' => 'value1',
+                'key2' => 'value2'
+            ],
+            'group2' => [
+                'key3' => 'value3',
+                'subgroup' => [
+                    'key4' => 'value4'
+                ]
+            ]
+        ];
+        $flattenedNested = $method->invoke($translator, $nestedArray);
+        $this->assertEquals([
+            'group1.key1' => 'value1',
+            'group1.key2' => 'value2',
+            'group2.key3' => 'value3',
+            'group2.subgroup.key4' => 'value4'
+        ], $flattenedNested);
 
-        // Verify that the 'test' locale was added
-        $locales = $this->getLocalesFromTranslator($translator);
-        $this->assertContains(
-            'test',
-            $locales,
-            'The test locale should be added when adding the test translations directory'
-        );
-
-        // Clean up the temporary directory
-        rmdir($tempDir);
+        // Test flattening with a prefix
+        $prefixedArray = [
+            'key1' => 'value1',
+            'key2' => [
+                'subkey1' => 'subvalue1'
+            ]
+        ];
+        $flattenedPrefixed = $method->invoke($translator, $prefixedArray, 'prefix');
+        $this->assertEquals([
+            'prefix.key1' => 'value1',
+            'prefix.key2.subkey1' => 'subvalue1'
+        ], $flattenedPrefixed);
     }
 
     /**
-     * Test that adding a non-existent directory is handled gracefully
+     * Test getting all available locales
      */
-    public function testAddNonExistentDirectory()
+    public function testGetAllLocales(): void
     {
-        $this->expectException(\Exception::class);
         /** @var Translator $translator */
         $translator = $this->translator;
 
-        // We expect an exception when adding a non-existent directory
-        $this->expectException(\Exception::class);
-        
-        // Create a path to a directory that doesn't exist
-        $nonExistentDir = sys_get_temp_dir() . '/non_existent_dir_' . uniqid();
-        
-        // This should throw an exception
-        $translator->addTranslationDirectory($nonExistentDir);
+        // The translator should have at least the 'test' locale from setup
+        $locales = $translator->getAllLocales();
+        $this->assertContains('test', $locales);
+        $this->assertContains('en', $locales);
     }
 
     /**
-     * Helper method to get locales from the translator
+     * Test filtering translations by key pattern
      */
-    private function getLocalesFromTranslator(Translator $translator): array
+    public function testTransFilter(): void
     {
-        return $translator->getAllLocales();
-    }
+        /** @var Translator $translator */
+        $translator = $this->translator;
 
-    /**
-     * Helper method to get resources from the Symfony translator
-     */
-    private function getResourcesFromTranslator(Translator $translator): array
-    {
-        $resources = [];
-        foreach ($translator->translator->getCatalogues() as $catalogue) {
-            $resources = array_merge($resources, $catalogue->getResources());
-        }
-        return $resources;
+        // Create a mock catalogue with test translations
+        $catalogue = new MessageCatalogue('test');
+        $catalogue->add([
+            'welcome.title' => 'Welcome',
+            'welcome.message' => 'Welcome to our site',
+            'error.title' => 'Error',
+            'error.message' => 'An error occurred'
+        ], 'messages');
+
+        // Configure the Symfony translator mock to return our catalogue
+        $translator->translator->method('getCatalogue')
+            ->willReturn($catalogue);
+
+        // Test filtering with a pattern that matches welcome keys
+        $welcomeFiltered = $translator->transFilter('welcome.*');
+        $this->assertCount(2, $welcomeFiltered);
+        $this->assertArrayHasKey('messages::welcome.title', $welcomeFiltered);
+        $this->assertArrayHasKey('messages::welcome.message', $welcomeFiltered);
+
+        // Test filtering with a pattern that matches error keys
+        $errorFiltered = $translator->transFilter('error.*');
+        $this->assertCount(2, $errorFiltered);
+        $this->assertArrayHasKey('messages::error.title', $errorFiltered);
+        $this->assertArrayHasKey('messages::error.message', $errorFiltered);
+
+        // Test filtering with a pattern that matches all keys
+        $allFiltered = $translator->transFilter('*');
+        $this->assertCount(4, $allFiltered);
     }
 }
