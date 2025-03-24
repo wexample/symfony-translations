@@ -483,7 +483,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // Check if the translation exists in the catalogue or if we're forcing translation
         $catalogue = $this->translator->getCatalogue();
         // Return the translation if it exists, otherwise return the default value
-        if ($forceTranslate || $catalogue->has($id, $domain)) {
+        if ($forceTranslate || ($domain && $catalogue->has($id, $domain))) {
             return $this->translator->trans(
                 $id,
                 $parameters,

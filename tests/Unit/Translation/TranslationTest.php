@@ -2,22 +2,19 @@
 
 namespace Wexample\SymfonyTranslations\Tests\Unit\Translation;
 
-use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\FrameworkBundle\Translation\Translator as SymfonyTranslator;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
-use Symfony\Component\Translation\MessageCatalogue;
-use Symfony\Component\Translation\MessageCatalogueInterface;
 use Wexample\SymfonyTranslations\Tests\AbstractTranslationTest;
 use Wexample\SymfonyTranslations\Translation\Translator;
 
 class TranslationTest extends AbstractTranslationTest
 {
-    
+
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create mock objects
         $this->symTranslator = $this->createMock(SymfonyTranslator::class);
         $kernel = $this->createMock(KernelInterface::class);
@@ -55,7 +52,7 @@ class TranslationTest extends AbstractTranslationTest
                 'welcome_message' => 'Hello %name%, welcome to our application!'
             ]
         ];
-        
+
         $this->configureTranslatorMock($translations);
 
         // Test basic translation with forceTranslate
@@ -96,23 +93,23 @@ class TranslationTest extends AbstractTranslationTest
                 'bundle_title' => 'Bundle Title'
             ]
         ];
-        
+
         $this->configureTranslatorMock($translations);
-        
+
         // Test domain resolution with explicit domain
         $this->assertEquals(
             'Welcome to our site',
             $this->translator->trans('page_title', [], 'app.pages.home', null, true),
             'Translation with explicit domain should work correctly'
         );
-        
+
         // Test domain resolution with domain in the key
         $this->assertEquals(
             'Welcome to our site',
             $this->translator->trans('app.pages.home::page_title', [], null, null, true),
             'Translation with domain in the key should work correctly'
         );
-        
+
         // Test bundle domain resolution
         $this->assertEquals(
             'Bundle Title',
@@ -134,27 +131,48 @@ class TranslationTest extends AbstractTranslationTest
                 'title' => 'About Page Title'
             ]
         ];
-        
+
         $this->configureTranslatorMock($translations);
-        
+
         // Set up domain stack
         $this->translator->setDomain('page', 'app.pages.home');
-        
+
         // Test domain resolution with domain alias
         $this->assertEquals(
             'Home Page Title',
             $this->translator->trans('@page::title', [], null, null, true),
             'Translation with domain alias should work correctly'
         );
-        
+
         // Change the domain in the stack
         $this->translator->setDomain('page', 'app.pages.about');
-        
+
         // Test domain resolution with updated domain alias
         $this->assertEquals(
             'About Page Title',
             $this->translator->trans('@page::title', [], null, null, true),
             'Translation with updated domain alias should work correctly'
+        );
+    }
+
+    /**
+     * Test missing
+     */
+    public function testMissingTranslations(): void
+    {
+        $this->configureTranslatorMock([]);
+        $this->translator->setDomain('page', 'app.pages.home');
+
+        $this->assertEquals(
+            'Missing',
+            $this->translator->trans('Missing', [], null, null, true),
+            'Missing translation should be returned as it is'
+        );
+
+        $this->assertEquals(
+            'Missing',
+            $this->translator->trans('Missing', [], null, null),
+            'Missing translation should be returned as it is'
         );
     }
 }
