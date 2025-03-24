@@ -72,7 +72,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function __construct(
         public \Symfony\Bundle\FrameworkBundle\Translation\Translator $translator,
         KernelInterface $kernel,
-        private readonly ParameterBagInterface $parameterBag,
+        private readonly ParameterBagInterface $parameterBag
     )
     {
         // Initialize locales from the Symfony translator
@@ -131,6 +131,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $resolver = $this->yamlResolvers[$locale];
 
         foreach ($this->translationPaths as $key => $basePath) {
+            if (!is_dir($basePath)) {
+                continue; // Skip non-existent directories
+            }
+
             FileHelper::scanDirectoryForFiles(
                 directoryPath: $basePath,
                 extension: FileHelper::FILE_EXTENSION_YML,
@@ -143,16 +147,17 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     $key,
                     $resolver
                 ) {
-                    if (str_ends_with(
-                        $file->getFilename(),
-                        FileHelper::EXTENSION_SEPARATOR . $locale . FileHelper::EXTENSION_SEPARATOR . FileHelper::FILE_EXTENSION_YML
-                    )) {
+                    $filename = $file->getFilename();
+                    $expectedSuffix = FileHelper::EXTENSION_SEPARATOR . $locale . FileHelper::EXTENSION_SEPARATOR . FileHelper::FILE_EXTENSION_YML;
+
+                    if (str_ends_with($filename, $expectedSuffix)) {
                         $filePath = $file->getPathname();
 
                         $domain = $this->buildDomainFromPath($filePath, $basePath, is_string($key) ? $key : null);
 
-
-                        $resolver->registerFile($domain, $filePath);
+                        if (!empty($domain)) {
+                            $resolver->registerFile($domain, $filePath);
+                        }
                     }
                 });
         }
@@ -160,6 +165,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     /**
      * Populate translation catalogues with resolved values from YAML files
+     */
+    /**
+     * Populate translation catalogues with resolved values from YAML files
+     *
+     * @throws Exception If there's an error resolving values
      */
     public function populateCatalogues(): void
     {
@@ -169,19 +179,23 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             $catalogue = $this->translator->getCatalogue($locale);
 
             // Get all domains from the resolver
-            $domains = array_keys($resolver->getAllDomainsContent());
+            if ($domainsContent = $resolver->getAllDomainsContent()) {
+                $domains = array_keys($domainsContent);
 
-            // For each domain, resolve all values and add them to the catalogue
-            foreach ($domains as $domain) {
-                $values = $resolver->getAllDomainsContent()[$domain] ?? [];
+                // For each domain, resolve all values and add them to the catalogue
+                foreach ($domains as $domain) {
+                    $values = $domainsContent[$domain] ?? [];
 
-                $resolvedValues = $resolver->resolveValues($values, $domain);
+                    if (!empty($values)) {
+                        $resolvedValues = $resolver->resolveValues($values, $domain);
 
-                $flattenedValues = $this->flattenArray($resolvedValues);
+                        $flattenedValues = $this->flattenArray($resolvedValues);
 
-                foreach ($flattenedValues as $key => $value) {
-                    if (is_string($value)) {
-                        $catalogue->add([$key => $value], $domain);
+                        foreach ($flattenedValues as $key => $value) {
+                            if (is_string($value)) {
+                                $catalogue->add([$key => $value], $domain);
+                            }
+                        }
                     }
                 }
             }
@@ -214,7 +228,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * @param string $filePath The full path to the translation file
      * @param string $basePath The base directory containing translations
      * @param string|null $bundleName Optional prefix for the domain (e.g. bundle name)
-     * @return string The domain identifier
+     * @return string The domain identifier or empty string if invalid file
+     * @throws InvalidArgumentException If file path is invalid
      */
     public function buildDomainFromPath(
         string $filePath,
@@ -229,7 +244,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             $bundleName = substr($bundleName, strlen('@'));
         }
 
-        if (FileHelper::FILE_EXTENSION_YML !== $info->extension) {
+        if (!isset($info->extension) || FileHelper::FILE_EXTENSION_YML !== $info->extension) {
             return '';
         }
 
@@ -250,7 +265,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // Add subdirectory parts to domain if they exist
         if (VariableSpecialHelper::EMPTY_STRING !== $subDir) {
             $domainParts = explode('/', $subDir);
-            
+
             if ($bundleName && !empty($domainParts) && $domainParts[0] === 'assets') {
                 array_shift($domainParts);
             }
@@ -332,7 +347,9 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     public function revertDomain(string $name): void
     {
-        array_pop($this->domainsStack[$name]);
+        if (isset($this->domainsStack[$name]) && !empty($this->domainsStack[$name])) {
+            array_pop($this->domainsStack[$name]);
+        }
     }
 
     /**
@@ -345,9 +362,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function getDomain(string $name): ?string
     {
-        return empty($this->domainsStack[$name]) ?
-            null :
-            end($this->domainsStack[$name]);
+        if (!isset($this->domainsStack[$name]) || empty($this->domainsStack[$name])) {
+            return null;
+        }
+
+        return end($this->domainsStack[$name]);
     }
 
     public function resolveDomain(string $domain): ?string
@@ -433,39 +452,46 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     /**
      * {@inheritdoc}
+     *
+     * @param string $id The message id (may also contain the domain with a separator)
+     * @param array $parameters An array of parameters for the message
+     * @param string|null $domain The domain for the message or null to use the default
+     * @param string|null $locale The locale or null to use the default
+     * @param bool $forceTranslate Whether to force translation even if the key doesn't exist
+     * @return string The translated string
      */
     public function trans(
         string $id,
         array $parameters = [],
-        string $domain = null,
-        string $locale = null,
+        ?string $domain = null,
+        ?string $locale = null,
         bool $forceTranslate = false
     ): string
     {
         $default = $id;
-        
-        if (is_null($domain) && $domain = YamlIncludeResolver::splitDomain($id)) {
+
+        // Handle domain resolution from the ID if no domain is provided
+        if (null === $domain && ($domain = YamlIncludeResolver::splitDomain($id))) {
             $id = YamlIncludeResolver::splitKey($id);
             $domain = $this->resolveDomain($domain);
 
             if ($domain) {
-                $default = $domain.static::DOMAIN_SEPARATOR.$id;
+                $default = $domain . static::DOMAIN_SEPARATOR . $id;
             }
         }
 
-        // Return the full length key if not found, useful for debug.
-        return ($forceTranslate || $this
-            ->translator
-            ->getCatalogue()
-            ->has($id, $domain))
-            ? $this
-                ->translator
-                ->trans(
-                    $id,
-                    $parameters,
-                    $domain,
-                    $locale
-                )
-            : $default;
+        // Check if the translation exists in the catalogue or if we're forcing translation
+        $catalogue = $this->translator->getCatalogue();
+        // Return the translation if it exists, otherwise return the default value
+        if ($forceTranslate || $catalogue->has($id, $domain)) {
+            return $this->translator->trans(
+                $id,
+                $parameters,
+                $domain,
+                $locale
+            );
+        }
+
+        return $default;
     }
 }
