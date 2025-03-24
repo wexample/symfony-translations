@@ -11,6 +11,8 @@ Developed by [Wexample](https://wexample.com).
 - **Context-Aware Translations**: Automatically resolve translation paths based on the current controller/route
 - **Inheritance**: Extend translation files with the `~extends` directive
 - **Debug Tools**: Twig functions to debug translation domains, locales, and catalogs
+- **Bundle Integration**: Automatic handling of bundle translations with proper domain resolution
+- **Fallback Mechanism**: Returns the full domain and key if a translation is not found, making debugging easier
 
 ## Installation
 
@@ -25,6 +27,9 @@ composer require wexample/symfony-translations
 ```twig
 {# Use domain aliases for cleaner translation references #}
 {{ '@page::body' | trans }}
+
+{# Use domain and key directly #}
+{{ 'WexampleSymfonyDesignSystemBundle.pages.demo.index::page_title' | trans }}
 
 {# Debug translation information #}
 {{ dump_trans() }}
@@ -44,6 +49,23 @@ description: "@common.labels::%"
 # Extend another translation file
 ~extends: "@common.base"
 ```
+
+### Domain Resolution
+
+The translator automatically handles domain resolution in various contexts:
+
+1. **Bundle Translations**: When using translations from bundles, the system automatically handles paths with or without the 'assets' directory:
+   ```php
+   // Both will work and point to the same translation
+   $translator->trans('WexampleSymfonyDesignSystemBundle.pages.demo.index::page_title');
+   $translator->trans('WexampleSymfonyDesignSystemBundle.assets.pages.demo.index::page_title');
+   ```
+
+2. **Domain Stack**: You can push domains onto a stack for context-aware translations:
+   ```php
+   $translator->setDomain('page', 'app.pages.home');
+   $translator->trans('@page::title'); // Will use 'app.pages.home' as the domain
+   ```
 
 ## Console Commands
 
