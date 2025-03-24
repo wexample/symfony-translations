@@ -11,6 +11,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\SymfonyDesignSystem\Helper\TemplateHelper;
 use Wexample\SymfonyHelpers\Helper\FileHelper;
+use Wexample\SymfonyHelpers\Helper\VariableHelper;
 use function array_pop;
 use function array_values;
 use function current;
@@ -24,6 +25,18 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     final public const string DOMAIN_SEPARATOR = ClassHelper::METHOD_SEPARATOR;
 
     final public const string KEYS_SEPARATOR = FileHelper::EXTENSION_SEPARATOR;
+
+    final public const string DOMAIN_TYPE_COMPONENT = VariableHelper::COMPONENT;
+
+    final public const string DOMAIN_TYPE_FORM = VariableHelper::FORM;
+
+    final public const string DOMAIN_TYPE_LAYOUT = VariableHelper::LAYOUT;
+
+    final public const string DOMAIN_TYPE_PAGE = VariableHelper::PAGE;
+
+    final public const string DOMAIN_TYPE_PDF = FileHelper::FILE_EXTENSION_PDF;
+
+    final public const string DOMAIN_TYPE_VUE = FileHelper::FILE_EXTENSION_VUE;
 
     /**
      * Stack of domain contexts, organized by name
