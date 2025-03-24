@@ -136,12 +136,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     )) {
                         $filePath = $file->getPathname();
 
-                        // Remove prefix from bundles keys.
-                        if (str_starts_with($key, '@')) {
-                            $key = substr($key, strlen('@'));
-                        }
+                        $domain = $this->buildDomainFromPath($filePath, $basePath, is_string($key) ? $key : null);
 
-                        $domain = $this->buildDomainFromPath($filePath, $basePath, $key);
 
                         $resolver->registerFile($domain, $filePath);
                     }
@@ -204,16 +200,21 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      *
      * @param string $filePath The full path to the translation file
      * @param string $basePath The base directory containing translations
-     * @param string|int|null $aliasPrefix Optional prefix for the domain (e.g. bundle name)
+     * @param string|int|null $bundleName Optional prefix for the domain (e.g. bundle name)
      * @return string The domain identifier
      */
     public function buildDomainFromPath(
         string $filePath,
         string $basePath,
-        string|int $aliasPrefix = null
+        string|int $bundleName = null
     ): string
     {
         $info = (object) pathinfo($filePath);
+
+        // Remove prefix from bundles keys.
+        if (str_starts_with($bundleName, '@')) {
+            $bundleName = substr($bundleName, strlen('@'));
+        }
 
         if (FileHelper::FILE_EXTENSION_YML !== $info->extension) {
             return '';
@@ -245,8 +246,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $domain = implode(self::KEYS_SEPARATOR, $domainParts);
 
         // Add prefix if provided (for bundles or specific namespaces)
-        if (is_string($aliasPrefix)) {
-            $domain = $aliasPrefix . '.' . $domain;
+        if (is_string($bundleName)) {
+            $domain = $bundleName . '.' . $domain;
         }
 
         return $domain;
