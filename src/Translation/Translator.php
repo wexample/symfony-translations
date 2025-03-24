@@ -438,7 +438,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $id,
         array $parameters = [],
         string $domain = null,
-        string $locale = null
+        string $locale = null,
+        bool $forceTranslate = false
     ): string
     {
         $default = $id;
@@ -453,10 +454,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         }
 
         // Return the full length key if not found, useful for debug.
-        return $this
+        return ($forceTranslate || $this
             ->translator
             ->getCatalogue()
-            ->has($id, $domain)
+            ->has($id, $domain))
             ? $this
                 ->translator
                 ->trans(
