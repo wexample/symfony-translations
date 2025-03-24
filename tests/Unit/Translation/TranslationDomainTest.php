@@ -2,7 +2,7 @@
 
 namespace Wexample\SymfonyTranslations\Tests\Unit\Translation;
 
-use Wexample\SymfonyTranslations\Test\AbstractTranslationTest;
+use Wexample\SymfonyTranslations\Tests\AbstractTranslationTest;
 use Wexample\SymfonyTranslations\Translation\Translator;
 
 class TranslationDomainTest extends AbstractTranslationTest
@@ -16,8 +16,8 @@ class TranslationDomainTest extends AbstractTranslationTest
         $translator = $this->translator;
 
         // Set up test domains
-        $translator->setDomain('context', 'test.domain.one');
-        $translator->setDomain('page', 'test.domain.two');
+        $translator->setDomain('context', '@test.domain.one');
+        $translator->setDomain('page', '@test.domain.two');
 
         // Test getting domains from stack
         $this->assertEquals('@test.domain.one', $translator->getDomain('context'));
