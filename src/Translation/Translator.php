@@ -4,6 +4,8 @@ namespace Wexample\SymfonyTranslations\Translation;
 
 use Exception;
 use InvalidArgumentException;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Translation\MessageCatalogueInterface;
 use Symfony\Component\Translation\TranslatorBagInterface;
 use Symfony\Contracts\Translation\LocaleAwareInterface;
@@ -11,11 +13,11 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\SymfonyDesignSystem\Helper\TemplateHelper;
 use Wexample\SymfonyHelpers\Helper\FileHelper;
-use Wexample\SymfonyHelpers\Helper\VariableHelper;
 use function array_pop;
 use function array_values;
 use function current;
 use function explode;
+use function file_exists;
 use function pathinfo;
 use function preg_match;
 use function str_replace;
@@ -26,18 +28,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     final public const string KEYS_SEPARATOR = FileHelper::EXTENSION_SEPARATOR;
 
-    final public const string DOMAIN_TYPE_COMPONENT = VariableHelper::COMPONENT;
-
-    final public const string DOMAIN_TYPE_FORM = VariableHelper::FORM;
-
-    final public const string DOMAIN_TYPE_LAYOUT = VariableHelper::LAYOUT;
-
-    final public const string DOMAIN_TYPE_PAGE = VariableHelper::PAGE;
-
-    final public const string DOMAIN_TYPE_PDF = FileHelper::FILE_EXTENSION_PDF;
-
-    final public const string DOMAIN_TYPE_VUE = FileHelper::FILE_EXTENSION_VUE;
-
     /**
      * Stack of domain contexts, organized by name
      */
@@ -47,12 +37,19 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * Available locales
      */
     private array $locales = [];
+    
+    /**
+     * Translation paths
+     */
+    private array $translationPaths = [];
 
     /**
      * @throws InvalidArgumentException|Exception
      */
     public function __construct(
         public \Symfony\Bundle\FrameworkBundle\Translation\Translator $translator,
+        KernelInterface $kernel,
+        private readonly ParameterBagInterface $parameterBag,
     )
     {
         // Initialize locales from the Symfony translator
@@ -61,6 +58,28 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         foreach ($this->translator->getFallbackLocales() as $fallbackLocale) {
             $this->addLocale($fallbackLocale);
         }
+        
+        // Load translation paths
+        $this->loadTranslationPaths($kernel->getProjectDir());
+    }
+    
+    /**
+     * Load translation paths from parameter bag and project directory
+     */
+    private function loadTranslationPaths(string $pathProject): void
+    {
+        // Get translation paths from parameter bag
+        $configuredPaths = $this->parameterBag->get('translations_paths') ?? [];
+        
+        // Add default translations directory
+        $this->translationPaths = array_merge($configuredPaths, [
+            $pathProject . '/translations'
+        ]);
+        
+        // Filter out non-existent paths
+        $this->translationPaths = array_filter($this->translationPaths, function($path) {
+            return file_exists($path);
+        });
     }
     
     /**
