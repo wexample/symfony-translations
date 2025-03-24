@@ -5,6 +5,7 @@ namespace Wexample\SymfonyTranslations\Translation;
 use Exception;
 use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Translation\MessageCatalogueInterface;
 use Symfony\Component\Translation\TranslatorBagInterface;
@@ -12,6 +13,7 @@ use Symfony\Contracts\Translation\LocaleAwareInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\Helpers\Helper\FileHelper;
+use Wexample\PhpYaml\YamlIncludeResolver;
 use Wexample\SymfonyDesignSystem\Helper\TemplateHelper;
 use function array_merge;
 use function array_pop;
@@ -38,7 +40,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * Available locales
      */
     private array $locales = [];
-    
+
     /**
      * Translation paths
      */
@@ -55,15 +57,18 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         // Initialize locales from the Symfony translator
         $this->addLocale($this->getLocale());
-        
+
         foreach ($this->translator->getFallbackLocales() as $fallbackLocale) {
             $this->addLocale($fallbackLocale);
         }
-        
+
         // Load translation paths
         $this->loadTranslationPaths($kernel->getProjectDir());
+
+        // Load translation files
+        $this->loadTranslationFiles();
     }
-    
+
     /**
      * Load translation paths from parameter bag and project directory
      */
@@ -74,12 +79,40 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             array_merge(
                 $this->parameterBag->get('translations_paths') ?? [],
                 [
-                    $pathProject . '/translations'
+                    $pathProject . '/translations/'
                 ]
             )
         );
     }
-    
+
+    /**
+     * Load translation files for all locales
+     */
+    private function loadTranslationFiles(): void
+    {
+        foreach ($this->getAllLocales() as $locale) {
+            $this->loadTranslationFilesForLocale($locale);
+        }
+    }
+
+    /**
+     * Load translation files for a specific locale
+     */
+    private function loadTranslationFilesForLocale(string $locale): void
+    {
+        foreach ($this->translationPaths as $basePath) {
+            $finder = new Finder();
+            $finder->files()
+                ->in($basePath)
+                ->name('*.' . $locale . FileHelper::EXTENSION_SEPARATOR . FileHelper::FILE_EXTENSION_YML);
+
+            if (!$finder->hasResults()) {
+                continue;
+            }
+
+        }
+    }
+
     /**
      * Add a locale to the available locales list
      */
