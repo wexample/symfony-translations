@@ -46,11 +46,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * Translation paths
      */
     private array $translationPaths = [];
-
+    
     /**
-     * YAML resolver for handling includes and references
+     * YAML resolvers for handling includes and references, one per locale
      */
-    private YamlIncludeResolver $yamlResolver;
+    private array $yamlResolvers = [];
 
     /**
      * @throws InvalidArgumentException|Exception
@@ -61,9 +61,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         private readonly ParameterBagInterface $parameterBag,
     )
     {
-        // Initialize the YAML resolver
-        $this->yamlResolver = new YamlIncludeResolver();
-
         // Initialize locales from the Symfony translator
         $this->addLocale($this->getLocale());
 
@@ -76,6 +73,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
         // Load translation files
         $this->loadTranslationFiles();
+
+        $this->populateCatalogues();
     }
 
     /**
@@ -109,6 +108,13 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     private function loadTranslationFilesForLocale(string $locale): void
     {
+        // Create a resolver for this locale if it doesn't exist
+        if (!isset($this->yamlResolvers[$locale])) {
+            $this->yamlResolvers[$locale] = new YamlIncludeResolver();
+        }
+        
+        $resolver = $this->yamlResolvers[$locale];
+        
         foreach ($this->translationPaths as $key => $basePath) {
             FileHelper::scanDirectoryForFiles(
                 directoryPath: $basePath,
@@ -119,7 +125,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 (
                     $locale,
                     $basePath,
-                    $key
+                    $key,
+                    $resolver
                 ) {
                     if (str_ends_with(
                         $file->getFilename(),
@@ -129,9 +136,38 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
                         $domain = $this->buildDomainFromPath($filePath, $basePath, $key);
 
-                        $this->yamlResolver->registerFile($domain, $filePath);
+                        $resolver->registerFile($domain, $filePath);
                     }
                 });
+        }
+    }
+    
+    /**
+     * Populate translation catalogues with resolved values from YAML files
+     */
+    public function populateCatalogues(): void
+    {
+        // Process each locale
+        foreach ($this->yamlResolvers as $locale => $resolver) {
+            $debug[$locale] = [];
+            
+            // Get the catalogue for this locale
+            $catalogue = $this->translator->getCatalogue($locale);
+            
+            // Get all domains from the resolver
+            $domains = array_keys($resolver->getAllDomainsContent());
+
+            // For each domain, resolve all values and add them to the catalogue
+            foreach ($domains as $domain) {
+                $values = $resolver->getAllDomainsContent()[$domain] ?? [];
+                
+                // Add all values to the catalogue
+                foreach ($values as $key => $value) {
+                    if (is_string($value)) {
+                        $catalogue->set($key, $value, $domain);
+                    }
+                }
+            }
         }
     }
 
