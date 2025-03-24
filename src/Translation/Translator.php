@@ -101,6 +101,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     private function loadTranslationFilesForLocale(string $locale): void
     {
         foreach ($this->translationPaths as $basePath) {
+        foreach ($this->translationPaths as $key => $basePath) {
             $finder = new Finder();
             $finder->files()
                 ->in($basePath)
@@ -110,6 +111,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 continue;
             }
 
+
+            foreach ($finder as $fileInfo) {
+                // Build domain from file path
+                $relativePath = $fileInfo->getPathname();
+            }
         }
     }
 
