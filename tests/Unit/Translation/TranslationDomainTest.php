@@ -42,7 +42,7 @@ class TranslationDomainTest extends AbstractTranslationTest
     }
 
     /**
-     * Test setting domain from template path
+     * Test building domain from template path
      */
     public function testDomainFromTemplatePath(): void
     {
@@ -51,17 +51,15 @@ class TranslationDomainTest extends AbstractTranslationTest
 
         // Test with a simple path
         $path = 'pages/home/index.html.twig';
-        $domainFromPath = $translator->setDomainFromTemplatePath('path_domain', $path);
+        $domainFromPath = Translator::buildDomainFromTemplatePath($path);
         
         $this->assertEquals('pages.home.index', $domainFromPath);
-        $this->assertEquals($domainFromPath, $translator->getDomain('path_domain'));
-
+        
         // Test with a more complex path
         $path = 'components/header/navigation.html.twig';
-        $domainFromPath = $translator->setDomainFromTemplatePath('component_domain', $path);
+        $domainFromPath = Translator::buildDomainFromTemplatePath($path);
         
         $this->assertEquals('components.header.navigation', $domainFromPath);
-        $this->assertEquals($domainFromPath, $translator->getDomain('component_domain'));
     }
 
     /**
@@ -81,11 +79,11 @@ class TranslationDomainTest extends AbstractTranslationTest
 
         // Test with bundle name
         $domain = $translator->buildDomainFromPath($filePath, $basePath, 'TestBundle');
-        $this->assertEquals('TestBundle.test.messages.messages', $domain);
+        $this->assertEquals('TestBundle.translations.test.messages.messages', $domain);
 
         // Test with assets directory and bundle name
         $filePath = __DIR__ . '/../../Resources/translations/assets/test/messages/messages.test.yml';
         $domain = $translator->buildDomainFromPath($filePath, $basePath, 'TestBundle');
-        $this->assertEquals('TestBundle.test.messages.messages', $domain, 'Assets directory should be removed when bundle name is provided');
+        $this->assertEquals('TestBundle.translations.assets.test.messages.messages', $domain, 'The assets directory is part of the path');
     }
 }

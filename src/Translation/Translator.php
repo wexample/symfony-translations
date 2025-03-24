@@ -441,6 +441,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $locale = null
     ): string
     {
+        $default = $id;
+        
         if (is_null($domain) && $domain = YamlIncludeResolver::splitDomain($id)) {
             $id = YamlIncludeResolver::splitKey($id);
             $domain = $this->resolveDomain($domain);
