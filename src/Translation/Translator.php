@@ -12,13 +12,16 @@ use Symfony\Contracts\Translation\LocaleAwareInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\Helpers\Helper\FileHelper;
+use Wexample\Helpers\Helper\VariableSpecialHelper;
 use Wexample\PhpYaml\YamlIncludeResolver;
 use Wexample\SymfonyDesignSystem\Helper\TemplateHelper;
 use function array_merge;
 use function array_pop;
 use function array_values;
 use function current;
+use function dirname;
 use function explode;
+use function implode;
 use function pathinfo;
 use function preg_match;
 use function str_replace;
@@ -43,7 +46,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * Translation paths
      */
     private array $translationPaths = [];
-    
+
     /**
      * YAML resolver for handling includes and references
      */
@@ -60,7 +63,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         // Initialize the YAML resolver
         $this->yamlResolver = new YamlIncludeResolver();
-        
+
         // Initialize locales from the Symfony translator
         $this->addLocale($this->getLocale());
 
@@ -107,15 +110,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     private function loadTranslationFilesForLocale(string $locale): void
     {
         foreach ($this->translationPaths as $key => $basePath) {
-            $finder = new Finder();
-            $finder->files()
-                ->in($basePath)
-                ->name('*.' . $locale . FileHelper::EXTENSION_SEPARATOR . FileHelper::FILE_EXTENSION_YML);
-
-            if (!$finder->hasResults()) {
-                continue;
-            }
-
             FileHelper::scanDirectoryForFiles(
                 directoryPath: $basePath,
                 extension: FileHelper::FILE_EXTENSION_YML,
@@ -123,30 +117,75 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     \SplFileInfo $file
                 ) use
                 (
-                    &
-                    $dd,
-                    $locale
+                    $locale,
+                    $basePath,
+                    $key
                 ) {
                     if (str_ends_with(
                         $file->getFilename(),
                         FileHelper::EXTENSION_SEPARATOR . $locale . FileHelper::EXTENSION_SEPARATOR . FileHelper::FILE_EXTENSION_YML
                     )) {
-                        $relativePath = $file->getPathname();
-                        
-                        $domain = self::buildDomainFromPath($relativePath);
-                        $dd['rel'][] = $relativePath;
-                        $dd['domains'][] = $domain;
+                        $filePath = $file->getPathname();
 
-                        // Enregistrer le fichier dans le YamlResolver
-                        $this->yamlResolver->registerFile($domain, $relativePath);
-                        
-                        // Debug: afficher le domaine et le fichier enregistré
-                        $dd['registered'][$domain] = $relativePath;
+                        $domain = $this->buildDomainFromPath($filePath, $basePath, $key);
+
+                        $this->yamlResolver->registerFile($domain, $filePath);
                     }
                 });
-
-            dump($dd);
         }
+    }
+
+    /**
+     * Build a domain identifier from a translation file path
+     *
+     * @param string $filePath The full path to the translation file
+     * @param string $basePath The base directory containing translations
+     * @param string|int|null $aliasPrefix Optional prefix for the domain (e.g. bundle name)
+     * @return string The domain identifier
+     */
+    public function buildDomainFromPath(
+        string $filePath,
+        string $basePath,
+        string|int $aliasPrefix = null
+    ): string
+    {
+        $info = (object) pathinfo($filePath);
+
+        if (FileHelper::FILE_EXTENSION_YML !== $info->extension) {
+            return '';
+        }
+
+        // Split filename to get base name and locale
+        // example: messages.fr.yml -> [messages, fr]
+        $filenameParts = explode(FileHelper::EXTENSION_SEPARATOR, $info->filename);
+
+        // Get relative path from base directory
+        // example: /var/www/translations/admin/messages.fr.yml with base /var/www/translations
+        // gives: admin
+        $subDir = FileHelper::buildRelativePath(
+            $info->dirname,
+            dirname($basePath)
+        );
+
+        $domainParts = [];
+
+        // Add subdirectory parts to domain if they exist
+        if (VariableSpecialHelper::EMPTY_STRING !== $subDir) {
+            $domainParts = explode('/', $subDir);
+        }
+
+        // Add filename (without locale) to domain parts
+        $domainParts[] = $filenameParts[0];
+
+        // Join domain parts with separator
+        $domain = implode(self::KEYS_SEPARATOR, $domainParts);
+
+        // Add prefix if provided (for bundles or specific namespaces)
+        if (is_string($aliasPrefix)) {
+            $domain = $aliasPrefix . '.' . $domain;
+        }
+
+        return $domain;
     }
 
     /**
@@ -174,7 +213,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     }
 
     /**
-     * Build a domain identifier from a file path
+     * Build a domain identifier from a template path
      */
     public static function buildDomainFromTemplatePath(string $path): string
     {
