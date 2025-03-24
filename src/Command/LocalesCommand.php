@@ -10,7 +10,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 class LocalesCommand extends AbstractTranslationCommand
 {
-    protected static $defaultDescription = 'List available locales';
+    protected static $defaultDescription = 'List all available locales configured in the application';
 
     protected function execute(
         InputInterface $input,

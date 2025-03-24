@@ -11,10 +11,12 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 class TransCommand extends AbstractTranslationCommand
 {
-    protected static $defaultDescription = 'Translate a string in a specific locale';
+    protected static $defaultDescription = 'Translate a key in a specific locale with optional parameters and domain';
 
     protected function configure(): void
     {
+        parent::configure();
+
         $this
             ->addArgument('locale', InputArgument::REQUIRED, 'The locale to use for translation')
             ->addArgument('key', InputArgument::REQUIRED, 'The translation key to translate')

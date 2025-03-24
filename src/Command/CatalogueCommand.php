@@ -12,10 +12,12 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 class CatalogueCommand extends AbstractTranslationCommand
 {
-    protected static $defaultDescription = 'List translations for a specific locale';
+    protected static $defaultDescription = 'Display all translations for a specific locale and optionally filter by domain';
 
     protected function configure(): void
     {
+        parent::configure();
+
         $this
             ->addArgument('locale', InputArgument::REQUIRED, 'The locale to display translations for')
             ->addOption('domain', 'd', InputOption::VALUE_OPTIONAL, 'The domain to filter by');
