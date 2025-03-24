@@ -22,6 +22,7 @@ use function current;
 use function dirname;
 use function explode;
 use function implode;
+use function is_array;
 use function pathinfo;
 use function preg_match;
 use function str_replace;
@@ -46,7 +47,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * Translation paths
      */
     private array $translationPaths = [];
-    
+
     /**
      * YAML resolvers for handling includes and references, one per locale
      */
@@ -112,9 +113,9 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         if (!isset($this->yamlResolvers[$locale])) {
             $this->yamlResolvers[$locale] = new YamlIncludeResolver();
         }
-        
+
         $resolver = $this->yamlResolvers[$locale];
-        
+
         foreach ($this->translationPaths as $key => $basePath) {
             FileHelper::scanDirectoryForFiles(
                 directoryPath: $basePath,
@@ -134,6 +135,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     )) {
                         $filePath = $file->getPathname();
 
+                        // Remove prefix from bundles keys.
+                        if (str_starts_with($key, '@')) {
+                            $key = substr($key, strlen('@'));
+                        }
+
                         $domain = $this->buildDomainFromPath($filePath, $basePath, $key);
 
                         $resolver->registerFile($domain, $filePath);
@@ -141,7 +147,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 });
         }
     }
-    
+
     /**
      * Populate translation catalogues with resolved values from YAML files
      */
@@ -149,26 +155,47 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         // Process each locale
         foreach ($this->yamlResolvers as $locale => $resolver) {
-            $debug[$locale] = [];
-            
             // Get the catalogue for this locale
             $catalogue = $this->translator->getCatalogue($locale);
-            
+
             // Get all domains from the resolver
             $domains = array_keys($resolver->getAllDomainsContent());
 
             // For each domain, resolve all values and add them to the catalogue
             foreach ($domains as $domain) {
                 $values = $resolver->getAllDomainsContent()[$domain] ?? [];
-                
-                // Add all values to the catalogue
-                foreach ($values as $key => $value) {
+
+                $resolvedValues = $resolver->resolveValues($values, $domain);
+
+                $flattenedValues = $this->flattenArray($resolvedValues);
+
+                foreach ($flattenedValues as $key => $value) {
                     if (is_string($value)) {
                         $catalogue->set($key, $value, $domain);
                     }
                 }
             }
         }
+    }
+
+    private function flattenArray(
+        array $array,
+        string $prefix = ''
+    ): array
+    {
+        $result = [];
+
+        foreach ($array as $key => $value) {
+            $newKey = $prefix ? $prefix . '.' . $key : $key;
+
+            if (is_array($value)) {
+                $result = array_merge($result, $this->flattenArray($value, $newKey));
+            } else {
+                $result[$newKey] = $value;
+            }
+        }
+
+        return $result;
     }
 
     /**
