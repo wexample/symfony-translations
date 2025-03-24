@@ -13,14 +13,12 @@ use Symfony\Contracts\Translation\LocaleAwareInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\Helpers\Helper\FileHelper;
-use Wexample\PhpYaml\YamlIncludeResolver;
 use Wexample\SymfonyDesignSystem\Helper\TemplateHelper;
 use function array_merge;
 use function array_pop;
 use function array_values;
 use function current;
 use function explode;
-use function is_string;
 use function pathinfo;
 use function preg_match;
 use function str_replace;
@@ -100,7 +98,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     private function loadTranslationFilesForLocale(string $locale): void
     {
-        foreach ($this->translationPaths as $basePath) {
         foreach ($this->translationPaths as $key => $basePath) {
             $finder = new Finder();
             $finder->files()
@@ -111,6 +108,14 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 continue;
             }
 
+            FileHelper::scanDirectoryForFiles(
+                directoryPath: $basePath,
+                extension: $locale . FileHelper::EXTENSION_SEPARATOR . FileHelper::FILE_EXTENSION_YML,
+                fileProcessor: function (
+                    \SplFileInfo $file
+                ) use (&$dd) {
+                    $relativePath = $file->getPathname();
+                });
 
             foreach ($finder as $fileInfo) {
                 // Build domain from file path
