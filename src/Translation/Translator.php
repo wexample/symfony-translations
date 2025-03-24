@@ -12,6 +12,7 @@ use Symfony\Contracts\Translation\LocaleAwareInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\Helpers\Helper\FileHelper;
+use Wexample\PhpYaml\YamlIncludeResolver;
 use Wexample\SymfonyDesignSystem\Helper\TemplateHelper;
 use function array_merge;
 use function array_pop;
@@ -132,13 +133,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     )) {
                         $relativePath = $file->getPathname();
                         $dd['domains'][] = $relativePath;
+                        $domain = self::buildDomainFromPath($relativePath);
                     }
                 });
 
-            foreach ($finder as $fileInfo) {
-                // Build domain from file path
-                $relativePath = $fileInfo->getPathname();
-            }
+            dump($dd);
         }
     }
 
@@ -153,12 +152,12 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     /**
      * Set a domain based on a template path
      */
-    public function setDomainFromPath(
+    public function setDomainFromTemplatePath(
         string $name,
         string $path
     ): string
     {
-        $domain = self::buildDomainFromPath(
+        $domain = self::buildDomainFromTemplatePath(
             TemplateHelper::trimPathPrefix($path)
         );
 
@@ -169,10 +168,9 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     /**
      * Build a domain identifier from a file path
      */
-    public static function buildDomainFromPath(string $path): string
+    public static function buildDomainFromTemplatePath(string $path): string
     {
         $info = (object) pathinfo($path);
-
         // The path format is valid.
         if ('.' !== $info->dirname) {
             return str_replace(
