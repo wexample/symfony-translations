@@ -15,6 +15,7 @@ use Wexample\Helpers\Helper\FileHelper;
 use Wexample\Helpers\Helper\VariableSpecialHelper;
 use Wexample\PhpYaml\YamlIncludeResolver;
 use Wexample\SymfonyDesignSystem\Helper\TemplateHelper;
+use Wexample\SymfonyHelpers\Helper\VariableHelper;
 use function array_merge;
 use function array_pop;
 use function array_values;
@@ -32,6 +33,18 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     final public const string DOMAIN_SEPARATOR = ClassHelper::METHOD_SEPARATOR;
 
     final public const string KEYS_SEPARATOR = FileHelper::EXTENSION_SEPARATOR;
+
+    final public const string DOMAIN_TYPE_COMPONENT = VariableHelper::COMPONENT;
+
+    final public const string DOMAIN_TYPE_FORM = VariableHelper::FORM;
+
+    final public const string DOMAIN_TYPE_LAYOUT = VariableHelper::LAYOUT;
+
+    final public const string DOMAIN_TYPE_PAGE = VariableHelper::PAGE;
+
+    final public const string DOMAIN_TYPE_PDF = \Wexample\SymfonyHelpers\Helper\FileHelper::FILE_EXTENSION_PDF;
+
+    final public const string DOMAIN_TYPE_VUE = FileHelper::FILE_EXTENSION_VUE;
 
     /**
      * Stack of domain contexts, organized by name
@@ -200,13 +213,13 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      *
      * @param string $filePath The full path to the translation file
      * @param string $basePath The base directory containing translations
-     * @param string|int|null $bundleName Optional prefix for the domain (e.g. bundle name)
+     * @param string|null $bundleName Optional prefix for the domain (e.g. bundle name)
      * @return string The domain identifier
      */
     public function buildDomainFromPath(
         string $filePath,
         string $basePath,
-        string|int $bundleName = null
+        ?string $bundleName = null
     ): string
     {
         $info = (object) pathinfo($filePath);
@@ -237,6 +250,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // Add subdirectory parts to domain if they exist
         if (VariableSpecialHelper::EMPTY_STRING !== $subDir) {
             $domainParts = explode('/', $subDir);
+            
+            if ($bundleName && !empty($domainParts) && $domainParts[0] === 'assets') {
+                array_shift($domainParts);
+            }
         }
 
         // Add filename (without locale) to domain parts
@@ -405,6 +422,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $locale = null
     ): string
     {
+        if (is_null($domain) && $domain = YamlIncludeResolver::splitDomain($id)) {
+            $id = YamlIncludeResolver::splitKey($id);
+            $default = $domain . YamlIncludeResolver::DOMAIN_SEPARATOR . $id;
+        }
+
         // Return the full length key if not found, useful for debug.
         return $this
             ->translator
@@ -418,6 +440,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     $domain,
                     $locale
                 )
-            : $domain . YamlIncludeResolver::DOMAIN_SEPARATOR . $id;
+            : $default;
     }
 }
