@@ -29,7 +29,7 @@ class TranslationDomainTest extends AbstractTranslationTest
 
         // Test setting domain from path
         $path = 'test/path/to/file.html.twig';
-        $domainFromPath = $translator->setDomainFromPath('path_domain', $path);
+        $domainFromPath = $translator->setDomainFromTemplatePath('path_domain', $path);
 
         // Verify the domain was set correctly
         $this->assertNotNull($translator->getDomain('path_domain'));

@@ -132,8 +132,16 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                         FileHelper::EXTENSION_SEPARATOR . $locale . FileHelper::EXTENSION_SEPARATOR . FileHelper::FILE_EXTENSION_YML
                     )) {
                         $relativePath = $file->getPathname();
-                        $dd['domains'][] = $relativePath;
+                        
                         $domain = self::buildDomainFromPath($relativePath);
+                        $dd['rel'][] = $relativePath;
+                        $dd['domains'][] = $domain;
+
+                        // Enregistrer le fichier dans le YamlResolver
+                        $this->yamlResolver->registerFile($domain, $relativePath);
+                        
+                        // Debug: afficher le domaine et le fichier enregistré
+                        $dd['registered'][$domain] = $relativePath;
                     }
                 });
 
