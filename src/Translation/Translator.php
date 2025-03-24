@@ -225,7 +225,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $info = (object) pathinfo($filePath);
 
         // Remove prefix from bundles keys.
-        if (str_starts_with($bundleName, '@')) {
+        if ($bundleName && str_starts_with($bundleName, '@')) {
             $bundleName = substr($bundleName, strlen('@'));
         }
 
