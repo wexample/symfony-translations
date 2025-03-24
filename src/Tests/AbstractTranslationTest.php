@@ -1,6 +1,6 @@
 <?php
 
-namespace Wexample\SymfonyTranslations\Test;
+namespace Wexample\SymfonyTranslations\Tests;
 
 use Wexample\SymfonyTesting\Tests\AbstractApplicationTestCase;
 use Wexample\SymfonyTranslations\Translation\Translator;

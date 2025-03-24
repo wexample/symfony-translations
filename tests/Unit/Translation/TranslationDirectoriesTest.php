@@ -2,7 +2,7 @@
 
 namespace Wexample\SymfonyTranslations\Tests\Unit\Translation;
 
-use Wexample\SymfonyTranslations\Test\AbstractTranslationTest;
+use Wexample\SymfonyTranslations\Tests\AbstractTranslationTest;
 use Wexample\SymfonyTranslations\Translation\Translator;
 
 
