@@ -5,7 +5,6 @@ namespace Wexample\SymfonyTranslations\Translation;
 use Exception;
 use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Translation\MessageCatalogueInterface;
 use Symfony\Component\Translation\TranslatorBagInterface;
@@ -110,11 +109,22 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
             FileHelper::scanDirectoryForFiles(
                 directoryPath: $basePath,
-                extension: $locale . FileHelper::EXTENSION_SEPARATOR . FileHelper::FILE_EXTENSION_YML,
+                extension: FileHelper::FILE_EXTENSION_YML,
                 fileProcessor: function (
                     \SplFileInfo $file
-                ) use (&$dd) {
-                    $relativePath = $file->getPathname();
+                ) use
+                (
+                    &
+                    $dd,
+                    $locale
+                ) {
+                    if (str_ends_with(
+                        $file->getFilename(),
+                        FileHelper::EXTENSION_SEPARATOR . $locale . FileHelper::EXTENSION_SEPARATOR . FileHelper::FILE_EXTENSION_YML
+                    )) {
+                        $relativePath = $file->getPathname();
+                        $dd['domains'][] = $relativePath;
+                    }
                 });
 
             foreach ($finder as $fileInfo) {
