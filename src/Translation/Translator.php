@@ -404,11 +404,19 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $locale = null
     ): string
     {
-        return $this->translator->trans(
-            id: YamlIncludeResolver::splitKey($id),
-            parameters: $parameters,
-            domain: YamlIncludeResolver::splitDomain($id),
-            locale: $locale
-        );
+        // Return the full length key if not found, useful for debug.
+        return $this
+            ->translator
+            ->getCatalogue()
+            ->has($id, $domain)
+            ? $this
+                ->translator
+                ->trans(
+                    $id,
+                    $parameters,
+                    $domain,
+                    $locale
+                )
+            : $domain . YamlIncludeResolver::DOMAIN_SEPARATOR . $id;
     }
 }
