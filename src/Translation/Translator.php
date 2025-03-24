@@ -343,6 +343,25 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         return $this->domainsStack;
     }
 
+    public function getDomain(string $name): ?string
+    {
+        return empty($this->domainsStack[$name]) ?
+            null :
+            end($this->domainsStack[$name]);
+    }
+
+    public function resolveDomain(string $domain): ?string
+    {
+        if (str_starts_with($domain, YamlIncludeResolver::DOMAIN_PREFIX)) {
+            $domainPart = YamlIncludeResolver::trimDomainPrefix($domain);
+            if (isset($this->domainsStack[$domainPart])) {
+                return $this->getDomain($domainPart);
+            }
+        }
+
+        return $domain;
+    }
+
     /**
      * Filter translations by a key pattern
      */
@@ -424,7 +443,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         if (is_null($domain) && $domain = YamlIncludeResolver::splitDomain($id)) {
             $id = YamlIncludeResolver::splitKey($id);
-            $default = $domain . YamlIncludeResolver::DOMAIN_SEPARATOR . $id;
+            $domain = $this->resolveDomain($domain);
+
+            if ($domain) {
+                $default = $domain.static::DOMAIN_SEPARATOR.$id;
+            }
         }
 
         // Return the full length key if not found, useful for debug.
