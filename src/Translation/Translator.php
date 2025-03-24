@@ -75,6 +75,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // Load translation files
         $this->loadTranslationFiles();
 
+        // Populate catalogues
         $this->populateCatalogues();
     }
 
@@ -171,7 +172,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
                 foreach ($flattenedValues as $key => $value) {
                     if (is_string($value)) {
-                        $catalogue->set($key, $value, $domain);
+                        $catalogue->add([$key => $value], $domain);
                     }
                 }
             }
@@ -404,9 +405,9 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     ): string
     {
         return $this->translator->trans(
-            id: $id,
+            id: YamlIncludeResolver::splitKey($id),
             parameters: $parameters,
-            domain: $domain,
+            domain: YamlIncludeResolver::splitDomain($id),
             locale: $locale
         );
     }
