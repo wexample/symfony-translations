@@ -3,7 +3,7 @@
     "description": "A translations service overrides to support translations files includes and multiple domains in Symfony translations",
     "type": "library",
     "license": "MIT",
-    "version": "1.0.31",
+    "version": "1.0.32",
     "keywords": [
         "symfony-ux"
     ],
@@ -25,10 +25,10 @@
     ],
     "require": {
         "symfony/translation": ">=6.2",
-        "wexample/symfony-helpers": "^1.0.37",
-        "wexample/php-helpers": "^1.0.35",
-        "wexample/php-yaml": "^1.0.8",
-        "wexample/symfony-testing": "^1.0.31"
+        "wexample/symfony-helpers": "^1.0.38",
+        "wexample/php-helpers": "^1.0.36",
+        "wexample/php-yaml": "^1.0.9",
+        "wexample/symfony-testing": "^1.0.32"
     },
     "require-dev": {
         "wexample/symfony-testing": "^1.0.26",
