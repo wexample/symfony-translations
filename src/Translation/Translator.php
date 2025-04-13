@@ -189,13 +189,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
                     if (!empty($values)) {
                         $resolvedValues = $resolver->resolveValues($values, $domain);
-
-                        if ($domain === 'front.config.design_system.app.card') {
-                            dump($resolver);
-                            dump($values);
-                            dd($resolvedValues);
-                        }
-
                         $flattenedValues = ArrayHelper::flattenArray($resolvedValues);
 
                         foreach ($flattenedValues as $key => $value) {
