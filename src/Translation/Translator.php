@@ -10,6 +10,7 @@ use Symfony\Component\Translation\MessageCatalogueInterface;
 use Symfony\Component\Translation\TranslatorBagInterface;
 use Symfony\Contracts\Translation\LocaleAwareInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Wexample\Helpers\Helper\ArrayHelper;
 use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\Helpers\Helper\FileHelper;
 use Wexample\Helpers\Helper\VariableSpecialHelper;
@@ -23,7 +24,6 @@ use function current;
 use function dirname;
 use function explode;
 use function implode;
-use function is_array;
 use function pathinfo;
 use function preg_match;
 use function str_replace;
@@ -63,6 +63,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     /**
      * YAML resolvers for handling includes and references, one per locale
+     * @var array<YamlIncludeResolver> $yamlResolvers
      */
     private array $yamlResolvers = [];
 
@@ -189,7 +190,13 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     if (!empty($values)) {
                         $resolvedValues = $resolver->resolveValues($values, $domain);
 
-                        $flattenedValues = $this->flattenArray($resolvedValues);
+                        if ($domain === 'front.config.design_system.app.card') {
+                            dump($resolver);
+                            dump($values);
+                            dd($resolvedValues);
+                        }
+
+                        $flattenedValues = ArrayHelper::flattenArray($resolvedValues);
 
                         foreach ($flattenedValues as $key => $value) {
                             if (is_string($value)) {
@@ -200,26 +207,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 }
             }
         }
-    }
-
-    private function flattenArray(
-        array $array,
-        string $prefix = ''
-    ): array
-    {
-        $result = [];
-
-        foreach ($array as $key => $value) {
-            $newKey = $prefix ? $prefix . '.' . $key : $key;
-
-            if (is_array($value)) {
-                $result = array_merge($result, $this->flattenArray($value, $newKey));
-            } else {
-                $result[$newKey] = $value;
-            }
-        }
-
-        return $result;
     }
 
     /**
