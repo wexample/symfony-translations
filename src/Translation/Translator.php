@@ -366,16 +366,16 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     public function transFilter(string $key): array
     {
+        $keyDomain = YamlIncludeResolver::splitDomain($key);
         $catalogue = $this->translator->getCatalogue();
         $messages = $catalogue->all();
-        $regex = $this->buildRegexForFilterKey($key);
         $filtered = [];
 
-        foreach ($messages as $domain => $translations) {
-            foreach ($translations as $id => $translation) {
-                if (preg_match($regex, $id)) {
-                    $filtered[$domain . self::DOMAIN_SEPARATOR . $id] = $translation;
-                }
+        $regex = $this->buildRegexForFilterKey(YamlIncludeResolver::splitKey($key));
+
+        foreach (($messages[$keyDomain] ?? []) as $id => $translation) {
+            if (preg_match($regex, $id)) {
+                $filtered[$keyDomain . self::DOMAIN_SEPARATOR . $id] = $translation;
             }
         }
 
