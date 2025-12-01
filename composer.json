@@ -1,37 +1,37 @@
 {
-    "name": "wexample/symfony-translations",
-    "description": "A translations service overrides to support translations files includes and multiple domains in Symfony translations",
-    "type": "library",
-    "license": "MIT",
-    "version": "1.0.58",
-    "keywords": [
-        "symfony-ux"
-    ],
-    "autoload": {
-        "psr-4": {
-            "Wexample\\SymfonyTranslations\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Wexample\\SymfonyTranslations\\Tests\\": "tests/"
-        }
-    },
-    "authors": [
-        {
-            "name": "weeger",
-            "email": "romain.weeger@wexample.com"
-        }
-    ],
-    "require": {
-        "symfony/translation": ">=6.2",
-        "wexample/symfony-helpers": "^1.0.64",
-        "wexample/php-helpers": "^1.0.62",
-        "wexample/php-yaml": "^1.0.35",
-        "wexample/symfony-testing": "^1.0.58"
-    },
-    "require-dev": {
-        "wexample/symfony-testing": "^1.0.26",
-        "phpunit/phpunit": "^9.5"
+  "name": "wexample/symfony-translations",
+  "description": "A translations service overrides to support translations files includes and multiple domains in Symfony translations",
+  "type": "library",
+  "license": "MIT",
+  "version": "1.0.58",
+  "keywords": [
+    "symfony-ux"
+  ],
+  "autoload": {
+    "psr-4": {
+      "Wexample\\SymfonyTranslations\\": "src/"
     }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Wexample\\SymfonyTranslations\\Tests\\": "tests/"
+    }
+  },
+  "authors": [
+    {
+      "name": "weeger",
+      "email": "romain.weeger@wexample.com"
+    }
+  ],
+  "require": {
+    "symfony/translation": ">=6.2",
+    "wexample/symfony-helpers": "^1.0.64",
+    "wexample/php-helpers": "^1.0.62",
+    "wexample/php-yaml": "^1.0.35",
+    "wexample/symfony-testing": "^1.0.58"
+  },
+  "require-dev": {
+    "wexample/symfony-testing": "^1.0.26",
+    "phpunit/phpunit": "^9.5"
+  }
 }

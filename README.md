@@ -1,96 +1,106 @@
-# Symfony Translations Extension
+# symfony_translations
 
-An extension for Symfony's Translation component that adds support for YAML includes, references, and inheritance through integration with the [wexample/php-yaml](https://github.com/wexample/php-yaml) package.
+Version: 1.0.58
 
-Developed by [Wexample](https://wexample.com).
+A translations service overrides to support translations files includes and multiple domains in Symfony translations
 
-## Features
+## Code Quality & Typing
 
-- **YAML Includes**: Reference translations from other YAML files using the `@domain::key` syntax
-- **Domain Aliases**: Create aliases for translation domains to simplify references
-- **Context-Aware Translations**: Automatically resolve translation paths based on the current controller/route
-- **Inheritance**: Extend translation files with the `~extends` directive
-- **Debug Tools**: Twig functions to debug translation domains, locales, and catalogs
-- **Bundle Integration**: Automatic handling of bundle translations with proper domain resolution
-- **Fallback Mechanism**: Returns the full domain and key if a translation is not found, making debugging easier
+All the suite packages follow strict quality standards:
 
-## Installation
+- **Type hints**: Full type coverage with mypy validation
+- **Code formatting**: Enforced with black and isort
+- **Linting**: Comprehensive checks with custom scripts and tools
+- **Testing**: High test coverage requirements
 
-```bash
-composer require wexample/symfony-translations
-```
+These standards ensure reliability and maintainability across the suite.
 
-## Basic Usage
+## Versioning & Compatibility Policy
 
-### In Twig Templates
+Wexample packages follow **Semantic Versioning** (SemVer):
 
-```twig
-{# Use domain aliases for cleaner translation references #}
-{{ '@page::body' | trans }}
+- **MAJOR**: Breaking changes
+- **MINOR**: New features, backward compatible
+- **PATCH**: Bug fixes, backward compatible
 
-{# Use domain and key directly #}
-{{ 'WexampleSymfonyDesignSystemBundle.pages.demo.index::page_title' | trans }}
+We maintain backward compatibility within major versions and provide clear migration guides for breaking changes.
 
-{# Debug translation information #}
-{{ dump_trans() }}
-{{ dump_trans_locales() }}
-{{ dump_trans_domains() }}
-```
+## Changelog
 
-### In YAML Files
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes.
 
-```yaml
-# Reference another translation
-title: "@common.labels::welcome"
+Major changes are documented with migration guides when applicable.
 
-# Use the same key from another domain
-description: "@common.labels::%"
+## Migration Notes
 
-# Extend another translation file
-~extends: "@common.base"
-```
+When upgrading between major versions, refer to the migration guides in the documentation.
 
-### Domain Resolution
+Breaking changes are clearly documented with upgrade paths and examples.
 
-The translator automatically handles domain resolution in various contexts:
+## Security Policy
 
-1. **Bundle Translations**: When using translations from bundles, the system automatically handles paths with or without the 'assets' directory:
-   ```php
-   // Both will work and point to the same translation
-   $translator->trans('WexampleSymfonyDesignSystemBundle.pages.demo.index::page_title');
-   $translator->trans('WexampleSymfonyDesignSystemBundle.assets.pages.demo.index::page_title');
-   ```
+### Reporting Vulnerabilities
 
-2. **Domain Stack**: You can push domains onto a stack for context-aware translations:
-   ```php
-   $translator->setDomain('page', 'app.pages.home');
-   $translator->trans('@page::title'); // Will use 'app.pages.home' as the domain
-   ```
+If you discover a security vulnerability, please email security@wexample.com.
 
-## Console Commands
+**Do not** open public issues for security vulnerabilities.
 
-The package provides several useful console commands to help with translation management:
+We take security seriously and will respond promptly to verified reports.
 
-```bash
-# Show all translations for 'en' locale
-php bin/console translations:catalogue en
+## Privacy & Telemetry
 
-# Show translations for 'en' locale in the 'messages' domain
-php bin/console translations:catalogue en --domain=messages
-```
+This package does **not** collect any telemetry or usage data.
 
-```bash
-php bin/console translations:locales
-```
+Your privacy is respected — no data is transmitted to external services.
 
-```bash
-# Basic usage
-php bin/console translations:trans en "app.welcome"
+## Support Channels
 
-# With domain and parameters
-php bin/console translations:trans en "app.greeting" --domain=messages --parameters='{"name":"John"}'
-```
-## Testing
+- **GitHub Issues**: Bug reports and feature requests
+- **GitHub Discussions**: Questions and community support
+- **Documentation**: Comprehensive guides and API reference
+- **Email**: contact@wexample.com for general inquiries
 
-```bash
-phpunit
+Community support is available through GitHub Discussions.
+
+## Contribution Guidelines
+
+We welcome contributions to the Wexample suite!
+
+### How to Contribute
+
+1. **Fork** the repository
+2. **Create** a feature branch
+3. **Make** your changes
+4. **Test** thoroughly
+5. **Submit** a pull request
+
+## Maintainers & Authors
+
+Maintained by the Wexample team and community contributors.
+
+See [CONTRIBUTORS.md](CONTRIBUTORS.md) for the full list of contributors.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Free to use in both personal and commercial projects.
+
+## Integration in the Suite
+
+This package is part of the **Wexample Suite** — a collection of high-quality Python packages designed to work seamlessly together.
+
+### Related Packages
+
+The suite includes packages for configuration management, file handling, prompts, and more. Each package can be used independently or as part of the integrated suite.
+
+Visit the [Wexample Suite documentation](https://docs.wexample.com) for the complete package ecosystem.
+
+# About us
+
+Wexample stands as a cornerstone of the digital ecosystem — a collective of seasoned engineers, researchers, and creators driven by a relentless pursuit of technological excellence. More than a media platform, it has grown into a vibrant community where innovation meets craftsmanship, and where every line of code reflects a commitment to clarity, durability, and shared intelligence.
+
+This packages suite embodies this spirit. Trusted by professionals and enthusiasts alike, it delivers a consistent, high-quality foundation for modern development — open, elegant, and battle-tested. Its reputation is built on years of collaboration, refinement, and rigorous attention to detail, making it a natural choice for those who demand both robustness and beauty in their tools.
+
+Wexample cultivates a culture of mastery. Each package, each contribution carries the mark of a community that values precision, ethics, and innovation — a community proud to shape the future of digital craftsmanship.
+
