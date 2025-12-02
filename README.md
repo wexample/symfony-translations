@@ -1,4 +1,4 @@
-# symfony_translations
+# wexample/symfony-translations
 
 Version: 1.0.58
 
@@ -130,10 +130,10 @@ Refer to each package's documentation for specific version compatibility require
 ## Dependencies
 
 - symfony/translation: >=6.2
-- wexample/symfony-helpers: ^1.0.64
-- wexample/php-helpers: ^1.0.62
-- wexample/php-yaml: ^1.0.35
-- wexample/symfony-testing: ^1.0.58
+- wexample/symfony-helpers: 1.0.68
+- wexample/php-helpers: 1.0.69
+- wexample/php-yaml: 1.0.40
+- wexample/symfony-testing: 1.0.58
 
 
 # About us
