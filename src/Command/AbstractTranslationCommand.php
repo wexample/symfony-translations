@@ -13,8 +13,7 @@ abstract class AbstractTranslationCommand extends AbstractBundleCommand
         protected readonly Translator $translator,
         BundleService $bundleService,
         string $name = null,
-    )
-    {
+    ) {
         parent::__construct(
             $bundleService,
             $name

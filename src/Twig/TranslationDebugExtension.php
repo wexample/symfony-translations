@@ -10,8 +10,7 @@ class TranslationDebugExtension extends AbstractExtension
 {
     public function __construct(
         private readonly Translator $translator
-    )
-    {
+    ) {
 
     }
 
@@ -46,8 +45,7 @@ class TranslationDebugExtension extends AbstractExtension
     {
         if ($locale) {
             dump($this->translator->getCatalogue($locale));
-        }
-        else {
+        } else {
             dump($this->translator->getCatalogues());
         }
     }

@@ -15,14 +15,14 @@ class LocalesCommand extends AbstractTranslationCommand
     protected function execute(
         InputInterface $input,
         OutputInterface $output
-    ): int
-    {
+    ): int {
         $io = new SymfonyStyle($input, $output);
 
         $locales = $this->translator->getAllLocales();
 
         if (empty($locales)) {
             $io->warning('No locales found');
+
             return Command::SUCCESS;
         }
 
@@ -34,7 +34,7 @@ class LocalesCommand extends AbstractTranslationCommand
         foreach ($locales as $locale) {
             $rows[] = [
                 $index++,
-                $locale
+                $locale,
             ];
         }
 

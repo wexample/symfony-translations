@@ -10,7 +10,6 @@ use Wexample\SymfonyTranslations\Translation\Translator;
 
 class TranslationTest extends AbstractTranslationTest
 {
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -49,8 +48,8 @@ class TranslationTest extends AbstractTranslationTest
                 'test_key' => 'Test Value',
                 'simple_key' => 'Simple value',
                 'group.nested_key' => 'Nested translation value',
-                'welcome_message' => 'Hello %name%, welcome to our application!'
-            ]
+                'welcome_message' => 'Hello %name%, welcome to our application!',
+            ],
         ];
 
         $this->configureTranslatorMock($translations);
@@ -84,14 +83,14 @@ class TranslationTest extends AbstractTranslationTest
     {
         $translations = [
             'app.pages.home' => [
-                'page_title' => 'Welcome to our site'
+                'page_title' => 'Welcome to our site',
             ],
             'app.components.header' => [
-                'header' => 'Main Header'
+                'header' => 'Main Header',
             ],
             'TestBundle.pages.index' => [
-                'bundle_title' => 'Bundle Title'
-            ]
+                'bundle_title' => 'Bundle Title',
+            ],
         ];
 
         $this->configureTranslatorMock($translations);
@@ -125,11 +124,11 @@ class TranslationTest extends AbstractTranslationTest
     {
         $translations = [
             'app.pages.home' => [
-                'title' => 'Home Page Title'
+                'title' => 'Home Page Title',
             ],
             'app.pages.about' => [
-                'title' => 'About Page Title'
-            ]
+                'title' => 'About Page Title',
+            ],
         ];
 
         $this->configureTranslatorMock($translations);

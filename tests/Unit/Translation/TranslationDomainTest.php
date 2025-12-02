@@ -2,7 +2,6 @@
 
 namespace Wexample\SymfonyTranslations\Tests\Unit\Translation;
 
-use Wexample\PhpYaml\YamlIncludeResolver;
 use Wexample\SymfonyTranslations\Tests\AbstractTranslationTest;
 use Wexample\SymfonyTranslations\Translation\Translator;
 
@@ -31,11 +30,11 @@ class TranslationDomainTest extends AbstractTranslationTest
         // Test multiple domains in stack
         $translator->setDomain('context', 'translations.test.domain.three');
         $this->assertEquals('translations.test.domain.three', $translator->getDomain('context'));
-        
+
         // Test domain reversion
         $translator->revertDomain('context');
         $this->assertEquals('translations.test.domain.one', $translator->getDomain('context'));
-        
+
         // Test reversion of all domains in stack
         $translator->revertDomain('context');
         $this->assertNull($translator->getDomain('context'));
@@ -52,13 +51,13 @@ class TranslationDomainTest extends AbstractTranslationTest
         // Test with a simple path
         $path = 'pages/home/index.html.twig';
         $domainFromPath = Translator::buildDomainFromTemplatePath($path);
-        
+
         $this->assertEquals('pages.home.index', $domainFromPath);
-        
+
         // Test with a more complex path
         $path = 'components/header/navigation.html.twig';
         $domainFromPath = Translator::buildDomainFromTemplatePath($path);
-        
+
         $this->assertEquals('components.header.navigation', $domainFromPath);
     }
 
@@ -73,7 +72,7 @@ class TranslationDomainTest extends AbstractTranslationTest
         // Test with a simple file path
         $filePath = __DIR__ . '/../../Resources/translations/test/messages/messages.test.yml';
         $basePath = __DIR__ . '/../../Resources/translations';
-        
+
         $domain = $translator->buildDomainFromPath($filePath, $basePath);
         $this->assertEquals('translations.test.messages.messages', $domain);
 

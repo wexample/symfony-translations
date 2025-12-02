@@ -26,8 +26,7 @@ class CatalogueCommand extends AbstractTranslationCommand
     protected function execute(
         InputInterface $input,
         OutputInterface $output
-    ): int
-    {
+    ): int {
         $io = new SymfonyStyle($input, $output);
         $locale = $input->getArgument('locale');
         $domain = $input->getOption('domain');
@@ -39,12 +38,12 @@ class CatalogueCommand extends AbstractTranslationCommand
         SymfonyStyle $io,
         string $locale,
         ?string $domain
-    ): int
-    {
+    ): int {
         $catalogue = $this->translator->getCatalogue($locale);
 
-        if (!$catalogue) {
+        if (! $catalogue) {
             $io->error(sprintf('Catalogue for locale "%s" not found', $locale));
+
             return Command::FAILURE;
         }
 
@@ -52,6 +51,7 @@ class CatalogueCommand extends AbstractTranslationCommand
 
         if (empty($allDomains)) {
             $io->warning(sprintf('No translations found for locale "%s"%s', $locale, $domain ? sprintf(' and domain "%s"', $domain) : ''));
+
             return Command::SUCCESS;
         }
 
@@ -72,8 +72,7 @@ class CatalogueCommand extends AbstractTranslationCommand
     protected function displayTranslationsTable(
         SymfonyStyle $io,
         array $translations
-    ): void
-    {
+    ): void {
         $rows = [];
         $index = 1;
 
@@ -87,6 +86,7 @@ class CatalogueCommand extends AbstractTranslationCommand
 
         if (empty($rows)) {
             $io->writeln('No translations found');
+
             return;
         }
 

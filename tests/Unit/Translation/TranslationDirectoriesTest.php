@@ -28,7 +28,7 @@ class TranslationDirectoriesTest extends AbstractTranslationTest
 
         // Create a mock catalogue
         $catalogue = new MessageCatalogue('test');
-        
+
         // Configure the Symfony translator mock to return our catalogue
         $translator->translator->method('getCatalogue')
             ->willReturn($catalogue);
@@ -58,46 +58,46 @@ class TranslationDirectoriesTest extends AbstractTranslationTest
         // Test flattening a simple array
         $simpleArray = [
             'key1' => 'value1',
-            'key2' => 'value2'
+            'key2' => 'value2',
         ];
         $flattenedSimple = $method->invoke($translator, $simpleArray);
         $this->assertEquals([
             'key1' => 'value1',
-            'key2' => 'value2'
+            'key2' => 'value2',
         ], $flattenedSimple);
 
         // Test flattening a nested array
         $nestedArray = [
             'group1' => [
                 'key1' => 'value1',
-                'key2' => 'value2'
+                'key2' => 'value2',
             ],
             'group2' => [
                 'key3' => 'value3',
                 'subgroup' => [
-                    'key4' => 'value4'
-                ]
-            ]
+                    'key4' => 'value4',
+                ],
+            ],
         ];
         $flattenedNested = $method->invoke($translator, $nestedArray);
         $this->assertEquals([
             'group1.key1' => 'value1',
             'group1.key2' => 'value2',
             'group2.key3' => 'value3',
-            'group2.subgroup.key4' => 'value4'
+            'group2.subgroup.key4' => 'value4',
         ], $flattenedNested);
 
         // Test flattening with a prefix
         $prefixedArray = [
             'key1' => 'value1',
             'key2' => [
-                'subkey1' => 'subvalue1'
-            ]
+                'subkey1' => 'subvalue1',
+            ],
         ];
         $flattenedPrefixed = $method->invoke($translator, $prefixedArray, 'prefix');
         $this->assertEquals([
             'prefix.key1' => 'value1',
-            'prefix.key2.subkey1' => 'subvalue1'
+            'prefix.key2.subkey1' => 'subvalue1',
         ], $flattenedPrefixed);
     }
 
@@ -129,25 +129,25 @@ class TranslationDirectoriesTest extends AbstractTranslationTest
             'welcome.title' => 'Welcome',
             'welcome.message' => 'Welcome to our site',
             'error.title' => 'Error',
-            'error.message' => 'An error occurred'
+            'error.message' => 'An error occurred',
         ], 'messages');
 
         // Mock the Symfony translator to return our catalogue
         $translator->translator->method('getCatalogue')
             ->willReturn($catalogue);
-        
+
         // Mock the buildRegexForFilterKey method to return a simple regex
         $reflectionClass = new \ReflectionClass(Translator::class);
         $buildRegexMethod = $reflectionClass->getMethod('buildRegexForFilterKey');
         $buildRegexMethod->setAccessible(true);
-        
+
         // Verify the regex pattern is built correctly
         $this->assertEquals('/^welcome..*$/', $buildRegexMethod->invoke($translator, 'welcome.*'));
-        
+
         // Since we can't easily mock the preg_match call inside transFilter,
         // we'll just test that the method runs without errors
         $filtered = $translator->transFilter('welcome.*');
-        
+
         // The actual filtering logic is tested separately
         $this->assertIsArray($filtered);
     }

@@ -27,8 +27,7 @@ class TransCommand extends AbstractTranslationCommand
     protected function execute(
         InputInterface $input,
         OutputInterface $output
-    ): int
-    {
+    ): int {
         $io = new SymfonyStyle($input, $output);
         $key = $input->getArgument('key');
         $locale = $input->getArgument('locale');
@@ -37,18 +36,20 @@ class TransCommand extends AbstractTranslationCommand
 
         try {
             $parameters = json_decode($parametersJson, true, 512, JSON_THROW_ON_ERROR);
-            if (!is_array($parameters)) {
+            if (! is_array($parameters)) {
                 $parameters = [];
             }
         } catch (\JsonException $e) {
             $io->error('Invalid JSON for parameters: ' . $e->getMessage());
+
             return Command::FAILURE;
         }
 
         // Check if the locale exists
         $availableLocales = $this->translator->getAllLocales();
-        if (!in_array($locale, $availableLocales)) {
+        if (! in_array($locale, $availableLocales)) {
             $io->error(sprintf('Locale "%s" not found. Available locales: %s', $locale, implode(', ', $availableLocales)));
+
             return Command::FAILURE;
         }
 
