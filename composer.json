@@ -31,7 +31,6 @@
     "wexample/symfony-testing": "1.0.59"
   },
   "require-dev": {
-    "wexample/symfony-testing": "^1.0.26",
     "phpunit/phpunit": "^9.5"
   }
 }
