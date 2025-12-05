@@ -26,7 +26,7 @@
   "require": {
     "symfony/translation": ">=6.2",
     "wexample/symfony-helpers": "1.0.69",
-    "wexample/php-helpers": "==1.0.72",
+    "wexample/php-helpers": "==1.0.73",
     "wexample/php-yaml": "1.0.42",
     "wexample/symfony-testing": "1.0.59"
   },
