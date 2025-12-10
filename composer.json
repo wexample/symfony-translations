@@ -25,10 +25,10 @@
   ],
   "require": {
     "symfony/translation": ">=6.2",
-    "wexample/symfony-helpers": "==1.0.70",
-    "wexample/php-helpers": "==1.0.74",
-    "wexample/php-yaml": "==1.0.43",
-    "wexample/symfony-testing": "==1.0.60"
+    "wexample/symfony-helpers": "1.0.71",
+    "wexample/php-helpers": "1.0.76",
+    "wexample/php-yaml": "1.0.44",
+    "wexample/symfony-testing": "1.0.60"
   },
   "require-dev": {
     "phpunit/phpunit": "^9.5"
