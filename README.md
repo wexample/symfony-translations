@@ -1,6 +1,6 @@
 # wexample/symfony-translations
 
-Version: 1.0.59
+Version: 1.0.60
 
 A translations service overrides to support translations files includes and multiple domains in Symfony translations
 
@@ -113,7 +113,7 @@ Free to use in both personal and commercial projects.
 
 ## Integration in the Suite
 
-This package is part of the **Wexample Suite** — a collection of high-quality Python packages designed to work seamlessly together.
+This package is part of the Wexample Suite — a collection of high-quality, modular tools designed to work seamlessly together across multiple languages and environments.
 
 ### Related Packages
 
@@ -130,10 +130,10 @@ Refer to each package's documentation for specific version compatibility require
 ## Dependencies
 
 - symfony/translation: >=6.2
-- wexample/symfony-helpers: 1.0.69
-- wexample/php-helpers: 1.0.71
-- wexample/php-yaml: 1.0.42
-- wexample/symfony-testing: 1.0.59
+- wexample/symfony-helpers: ==1.0.70
+- wexample/php-helpers: ==1.0.74
+- wexample/php-yaml: ==1.0.43
+- wexample/symfony-testing: ==1.0.60
 
 
 # About us

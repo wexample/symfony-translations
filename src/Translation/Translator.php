@@ -15,7 +15,7 @@ use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\Helpers\Helper\FileHelper;
 use Wexample\Helpers\Helper\VariableSpecialHelper;
 use Wexample\PhpYaml\YamlIncludeResolver;
-use Wexample\SymfonyDesignSystem\Helper\TemplateHelper;
+use Wexample\SymfonyHelpers\Helper\TemplateHelper;
 use Wexample\SymfonyHelpers\Helper\VariableHelper;
 use function array_merge;
 use function array_pop;
