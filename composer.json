@@ -28,7 +28,8 @@
     "wexample/symfony-helpers": "1.0.72",
     "wexample/php-helpers": "1.0.77",
     "wexample/php-yaml": "1.0.45",
-    "wexample/symfony-testing": "1.0.61"
+    "wexample/symfony-testing": "1.0.61",
+    "wexample/template": "0.0.1"
   },
   "require-dev": {
     "phpunit/phpunit": "^9.5"
