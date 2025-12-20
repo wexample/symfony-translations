@@ -366,7 +366,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     public function transFilter(string $key): array
     {
-        $keyDomain = YamlIncludeResolver::splitDomain($key);
+        if (null === $keyDomain = YamlIncludeResolver::splitDomain($key)) {
+            return [];
+        }
+
+        $keyDomain = $this->resolveDomain($keyDomain);
         $catalogue = $this->translator->getCatalogue();
         $messages = $catalogue->all();
         $filtered = [];
