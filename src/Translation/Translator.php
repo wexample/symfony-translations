@@ -30,6 +30,8 @@ use function str_replace;
 
 class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface
 {
+    final public const string DOMAIN_PREFIX = '@';
+
     final public const string DOMAIN_SEPARATOR = ClassHelper::METHOD_SEPARATOR;
 
     final public const string KEYS_SEPARATOR = FileHelper::EXTENSION_SEPARATOR;
