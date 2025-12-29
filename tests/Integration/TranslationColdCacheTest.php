@@ -4,12 +4,14 @@ namespace Wexample\SymfonyTranslations\Tests\Integration;
 
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Twig\Environment;
+use Wexample\SymfonyTesting\Tests\Traits\GlobalHandlersSnapshotTrait;
+use Wexample\SymfonyTesting\Tests\Traits\RunInSeparateProcessTestTrait;
 use Wexample\SymfonyTranslations\Tests\Fixtures\App\AppKernel;
 
 class TranslationColdCacheTest extends KernelTestCase
 {
-    private mixed $initialExceptionHandler = null;
-    private mixed $initialErrorHandler = null;
+    use GlobalHandlersSnapshotTrait;
+    use RunInSeparateProcessTestTrait;
 
     protected static function getKernelClass(): string
     {
@@ -20,19 +22,17 @@ class TranslationColdCacheTest extends KernelTestCase
     {
         parent::setUp();
 
-        $this->initialExceptionHandler = $this->getCurrentExceptionHandler();
-        $this->initialErrorHandler = $this->getCurrentErrorHandler();
+        $this->snapshotGlobalHandlers();
     }
 
     protected function tearDown(): void
     {
         self::ensureKernelShutdown();
-        $this->restoreHandlers();
+        $this->restoreGlobalHandlers();
         parent::tearDown();
     }
 
-    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
-    public function testTranslationsAvailableOnFirstRequestAfterColdCache(): void
+    protected function runIsolatedTest(): void
     {
         $kernel = new AppKernel('test', true);
         $cacheDir = $kernel->getCacheDir();
@@ -68,48 +68,4 @@ class TranslationColdCacheTest extends KernelTestCase
         @rmdir($dir);
     }
 
-    private function restoreHandlers(): void
-    {
-        for ($i = 0; $i < 50; $i++) {
-            $current = $this->getCurrentExceptionHandler();
-            if ($current === $this->initialExceptionHandler) {
-                break;
-            }
-            if (!restore_exception_handler()) {
-                break;
-            }
-        }
-
-        for ($i = 0; $i < 50; $i++) {
-            $current = $this->getCurrentErrorHandler();
-            if ($current === $this->initialErrorHandler) {
-                break;
-            }
-            if (!restore_error_handler()) {
-                break;
-            }
-        }
-    }
-
-    private function getCurrentExceptionHandler(): mixed
-    {
-        $temporary = static function (): void {
-        };
-
-        $previous = set_exception_handler($temporary);
-        restore_exception_handler();
-
-        return $previous;
-    }
-
-    private function getCurrentErrorHandler(): mixed
-    {
-        $temporary = static function (): void {
-        };
-
-        $previous = set_error_handler($temporary);
-        restore_error_handler();
-
-        return $previous;
-    }
 }
