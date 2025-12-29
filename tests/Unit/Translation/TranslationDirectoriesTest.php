@@ -3,6 +3,7 @@
 namespace Wexample\SymfonyTranslations\Tests\Unit\Translation;
 
 use Symfony\Component\Translation\MessageCatalogue;
+use Wexample\Helpers\Helper\ArrayHelper;
 use Wexample\SymfonyTranslations\Tests\AbstractTranslationTest;
 use Wexample\SymfonyTranslations\Translation\Translator;
 
@@ -47,20 +48,12 @@ class TranslationDirectoriesTest extends AbstractTranslationTest
      */
     public function testFlattenArray(): void
     {
-        /** @var Translator $translator */
-        $translator = $this->translator;
-
-        // Use reflection to access the private flattenArray method
-        $reflectionClass = new \ReflectionClass(Translator::class);
-        $method = $reflectionClass->getMethod('flattenArray');
-        $method->setAccessible(true);
-
         // Test flattening a simple array
         $simpleArray = [
             'key1' => 'value1',
             'key2' => 'value2',
         ];
-        $flattenedSimple = $method->invoke($translator, $simpleArray);
+        $flattenedSimple = ArrayHelper::flattenArray($simpleArray);
         $this->assertEquals([
             'key1' => 'value1',
             'key2' => 'value2',
@@ -79,7 +72,7 @@ class TranslationDirectoriesTest extends AbstractTranslationTest
                 ],
             ],
         ];
-        $flattenedNested = $method->invoke($translator, $nestedArray);
+        $flattenedNested = ArrayHelper::flattenArray($nestedArray);
         $this->assertEquals([
             'group1.key1' => 'value1',
             'group1.key2' => 'value2',
@@ -94,7 +87,7 @@ class TranslationDirectoriesTest extends AbstractTranslationTest
                 'subkey1' => 'subvalue1',
             ],
         ];
-        $flattenedPrefixed = $method->invoke($translator, $prefixedArray, 'prefix');
+        $flattenedPrefixed = ArrayHelper::flattenArray($prefixedArray, 'prefix');
         $this->assertEquals([
             'prefix.key1' => 'value1',
             'prefix.key2.subkey1' => 'subvalue1',

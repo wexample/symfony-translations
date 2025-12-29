@@ -15,9 +15,9 @@ class TranslationTest extends AbstractTranslationTest
         parent::setUp();
 
         // Create mock objects
-        $this->symTranslator = $this->createMock(SymfonyTranslator::class);
-        $kernel = $this->createMock(KernelInterface::class);
-        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $this->symTranslator = $this->createStub(SymfonyTranslator::class);
+        $kernel = $this->createStub(KernelInterface::class);
+        $parameterBag = $this->createStub(ParameterBagInterface::class);
 
         // Configure mocks
         $kernel->method('getProjectDir')

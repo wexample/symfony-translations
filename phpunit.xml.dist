@@ -1,22 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
-         bootstrap="vendor/autoload.php"
-         colors="true"
-         verbose="true">
-    <php>
-        <env name="KERNEL_CLASS" value="Wexample\SymfonyTesting\Tests\TestKernel" />
-        <env name="APP_ENV" value="test" />
-        <env name="APP_DEBUG" value="1" />
-    </php>
-    <testsuites>
-        <testsuite name="Wexample Symfony Translations Test Suite">
-            <directory>tests</directory>
-        </testsuite>
-    </testsuites>
-    <coverage>
-        <include>
-            <directory suffix=".php">src</directory>
-        </include>
-    </coverage>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/12.5/phpunit.xsd" bootstrap="vendor/autoload.php" colors="true" cacheDirectory=".phpunit.cache">
+  <php>
+    <env name="KERNEL_CLASS" value="Wexample\SymfonyTesting\Tests\TestKernel"/>
+    <env name="APP_ENV" value="test"/>
+    <env name="APP_DEBUG" value="1"/>
+  </php>
+  <testsuites>
+    <testsuite name="Wexample Symfony Translations Test Suite">
+      <directory>tests</directory>
+    </testsuite>
+  </testsuites>
+  <source>
+    <include>
+      <directory suffix=".php">src</directory>
+    </include>
+  </source>
 </phpunit>
