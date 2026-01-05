@@ -30,4 +30,3 @@ class AppKernel extends AbstractFixtureKernel
         return __DIR__ . '/Controller/';
     }
 }
-
