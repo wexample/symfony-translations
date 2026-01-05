@@ -48,7 +48,7 @@ class TranslationColdCacheTest extends KernelTestCase
 
     private function rmDir(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 

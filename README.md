@@ -133,7 +133,7 @@ Refer to each package's documentation for specific version compatibility require
 - wexample/symfony-helpers: 1.0.72
 - wexample/php-helpers: 1.0.77
 - wexample/php-yaml: 1.0.45
-- wexample/symfony-testing: 1.0.61
+- wexample/symfony-template: 0.0.1
 
 
 # About us

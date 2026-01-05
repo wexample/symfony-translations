@@ -14,4 +14,3 @@ final class TestTranslationController
         return new Response($twig->render('page.html.twig'));
     }
 }
-
