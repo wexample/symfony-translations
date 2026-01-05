@@ -15,7 +15,7 @@ use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\Helpers\Helper\FileHelper;
 use Wexample\Helpers\Helper\VariableSpecialHelper;
 use Wexample\PhpYaml\YamlIncludeResolver;
-use Wexample\SymfonyHelpers\Helper\TemplateHelper;
+use Wexample\SymfonyTemplate\Helper\TemplateHelper;
 use Wexample\SymfonyHelpers\Helper\VariableHelper;
 use function array_merge;
 use function array_pop;
@@ -30,6 +30,8 @@ use function str_replace;
 
 class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface
 {
+    final public const string DOMAIN_PREFIX = '@';
+
     final public const string DOMAIN_SEPARATOR = ClassHelper::METHOD_SEPARATOR;
 
     final public const string KEYS_SEPARATOR = FileHelper::EXTENSION_SEPARATOR;
@@ -66,6 +68,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * @var array<YamlIncludeResolver> $yamlResolvers
      */
     private array $yamlResolvers = [];
+
+    /**
+     * Tracks which locales have had their catalogue populated for this request lifecycle.
+     */
+    private array $cataloguesPopulated = [];
 
     /**
      * @throws InvalidArgumentException|Exception
@@ -176,25 +183,41 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         // Process each locale
         foreach ($this->yamlResolvers as $locale => $resolver) {
-            // Get the catalogue for this locale
-            $catalogue = $this->translator->getCatalogue($locale);
+            $this->populateCatalogueForLocale($locale);
+        }
+    }
 
-            // Get all domains from the resolver
-            if ($domainsContent = $resolver->getAllDomainsContent()) {
-                $domains = array_keys($domainsContent);
+    /**
+     * Populate a single translation catalogue with resolved values from YAML files.
+     *
+     * @throws Exception If there's an error resolving values
+     */
+    private function populateCatalogueForLocale(string $locale): void
+    {
+        if (!isset($this->yamlResolvers[$locale])) {
+            return;
+        }
 
-                // For each domain, resolve all values and add them to the catalogue
-                foreach ($domains as $domain) {
-                    $values = $domainsContent[$domain] ?? [];
+        $resolver = $this->yamlResolvers[$locale];
 
-                    if (!empty($values)) {
-                        $resolvedValues = $resolver->resolveValues($values, $domain);
-                        $flattenedValues = ArrayHelper::flattenArray($resolvedValues);
+        // Get the catalogue for this locale
+        $catalogue = $this->translator->getCatalogue($locale);
 
-                        foreach ($flattenedValues as $key => $value) {
-                            if (is_string($value)) {
-                                $catalogue->add([$key => $value], $domain);
-                            }
+        // Get all domains from the resolver
+        if ($domainsContent = $resolver->getAllDomainsContent()) {
+            $domains = array_keys($domainsContent);
+
+            // For each domain, resolve all values and add them to the catalogue
+            foreach ($domains as $domain) {
+                $values = $domainsContent[$domain] ?? [];
+
+                if (!empty($values)) {
+                    $resolvedValues = $resolver->resolveValues($values, $domain);
+                    $flattenedValues = ArrayHelper::flattenArray($resolvedValues);
+
+                    foreach ($flattenedValues as $key => $value) {
+                        if (is_string($value)) {
+                            $catalogue->add([$key => $value], $domain);
                         }
                     }
                 }
@@ -366,7 +389,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     public function transFilter(string $key): array
     {
-        $keyDomain = YamlIncludeResolver::splitDomain($key);
+        if (null === $keyDomain = YamlIncludeResolver::splitDomain($key)) {
+            return [];
+        }
+
+        $keyDomain = $this->resolveDomain($keyDomain);
         $catalogue = $this->translator->getCatalogue();
         $messages = $catalogue->all();
         $filtered = [];
@@ -412,6 +439,14 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function setLocale($locale): void
     {
         $this->translator->setLocale($locale);
+
+        $locale = (string) $locale;
+        unset($this->cataloguesPopulated[$locale]);
+        if (!isset($this->locales[$locale])) {
+            $this->addLocale($locale);
+            $this->loadTranslationFilesForLocale($locale);
+            $this->populateCatalogueForLocale($locale);
+        }
     }
 
     /**
@@ -448,6 +483,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         bool $forceTranslate = false
     ): string
     {
+        $this->ensureCataloguePopulated($locale);
+
         $default = $id;
 
         // Handle domain resolution from the ID if no domain is provided
@@ -473,5 +510,22 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         }
 
         return $default;
+    }
+
+    private function ensureCataloguePopulated(?string $locale = null): void
+    {
+        $locale = $locale ?? $this->getLocale();
+
+        if (isset($this->cataloguesPopulated[$locale])) {
+            return;
+        }
+
+        if (!isset($this->locales[$locale])) {
+            $this->addLocale($locale);
+            $this->loadTranslationFilesForLocale($locale);
+        }
+
+        $this->populateCatalogueForLocale($locale);
+        $this->cataloguesPopulated[$locale] = true;
     }
 }

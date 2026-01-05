@@ -37,12 +37,4 @@ coverage*.lcov
 .php-cs-fixer.cache
 .scannerwork
 /vendor
-.php-cs-fixer.cache
-.scannerwork
-/vendor
-.php-cs-fixer.cache
-.scannerwork
-/vendor
-.php-cs-fixer.cache
-.scannerwork
-/vendor
+/.phpunit.cache

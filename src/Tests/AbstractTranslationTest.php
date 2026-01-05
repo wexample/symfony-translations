@@ -19,9 +19,9 @@ abstract class AbstractTranslationTest extends AbstractApplicationTestCase
         parent::setUp();
 
         // Create mock objects
-        $symTranslator = $this->createMock(SymfonyTranslator::class);
-        $kernel = $this->createMock(KernelInterface::class);
-        $parameterBag = $this->createMock(ParameterBagInterface::class);
+        $this->symTranslator = $this->createStub(SymfonyTranslator::class);
+        $kernel = $this->createStub(KernelInterface::class);
+        $parameterBag = $this->createStub(ParameterBagInterface::class);
 
         // Configure mocks
         $kernel->method('getProjectDir')
@@ -33,17 +33,17 @@ abstract class AbstractTranslationTest extends AbstractApplicationTestCase
 
         // Create a stub for the Symfony translator's getCatalogue method
         $catalogue = new \Symfony\Component\Translation\MessageCatalogue('test');
-        $symTranslator->method('getCatalogue')
+        $this->symTranslator->method('getCatalogue')
             ->willReturn($catalogue);
 
-        $symTranslator->method('getFallbackLocales')
+        $this->symTranslator->method('getFallbackLocales')
             ->willReturn(['en']);
 
-        $symTranslator->method('getLocale')
+        $this->symTranslator->method('getLocale')
             ->willReturn('test');
 
         // Create the translator instance
-        $this->translator = new Translator($symTranslator, $kernel, $parameterBag);
+        $this->translator = new Translator($this->symTranslator, $kernel, $parameterBag);
     }
 
     /**
@@ -52,7 +52,7 @@ abstract class AbstractTranslationTest extends AbstractApplicationTestCase
     protected function configureTranslatorMock(array $translations): void
     {
         // Create a mock catalogue that will respond correctly to has() method
-        $mockCatalogue = $this->createMock(MessageCatalogueInterface::class);
+        $mockCatalogue = $this->createStub(MessageCatalogueInterface::class);
 
         // Configure the has method to return true for our test keys
         $mockCatalogue->method('has')

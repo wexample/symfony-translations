@@ -1,0 +1,19 @@
+framework:
+  test: true
+  secret: "test"
+  default_locale: fr
+  translator:
+    default_path: "%kernel.project_dir%/translations"
+    fallbacks: ["en"]
+
+twig:
+  default_path: "%kernel.project_dir%/templates"
+
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  Wexample\SymfonyTranslations\Tests\Fixtures\App\Controller\TestTranslationController:
+    tags: ["controller.service_arguments"]
