@@ -1,6 +1,6 @@
 # wexample/symfony-translations
 
-Version: 1.0.71
+Version: 1.0.72
 
 A translations service overrides to support translations files includes and multiple domains in Symfony translations
 
@@ -130,11 +130,11 @@ Refer to each package's documentation for specific version compatibility require
 ## Dependencies
 
 - symfony/translation: >=6.2
-- wexample/symfony-helpers: 1.0.84
-- wexample/symfony-testing: 1.0.71
-- wexample/php-helpers: 1.0.88
-- wexample/php-yaml: 1.0.56
-- wexample/symfony-template: 0.0.10
+- wexample/symfony-helpers: 1.0.85
+- wexample/symfony-testing: 1.0.72
+- wexample/php-helpers: 1.0.89
+- wexample/php-yaml: 1.0.57
+- wexample/symfony-template: 0.0.11
 
 
 # About us
