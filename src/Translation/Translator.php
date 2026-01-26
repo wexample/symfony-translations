@@ -509,6 +509,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             );
         }
 
+        if ($domain) {
+            return $domain . static::DOMAIN_SEPARATOR . $id;
+        }
+
         return $default;
     }
 
