@@ -1,47 +1,47 @@
 {
-    "name": "wexample/symfony-translations",
-    "description": "A translations service overrides to support translations files includes and multiple domains in Symfony translations",
-    "type": "library",
-    "license": "MIT",
-    "version": "1.0.75",
-    "keywords": [
-        "symfony-ux"
-    ],
-    "autoload": {
-        "psr-4": {
-            "Wexample\\SymfonyTranslations\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Wexample\\SymfonyTranslations\\Tests\\": "tests/"
-        }
-    },
-    "authors": [
-        {
-            "name": "weeger",
-            "email": "romain.weeger@wexample.com"
-        }
-    ],
-    "require": {
-        "symfony/translation": ">=6.2",
-        "wexample/symfony-helpers": "*",
-        "wexample/symfony-testing": "*",
-        "wexample/php-helpers": "*",
-        "wexample/php-yaml": "*",
-        "wexample/symfony-template": "*"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "*",
-        "wexample/symfony-testing": "*"
-    },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../*",
-            "options": {
-                "symlink": true
-            }
-        }
-    ]
+  "name": "wexample/symfony-translations",
+  "description": "A translations service overrides to support translations files includes and multiple domains in Symfony translations",
+  "type": "library",
+  "license": "MIT",
+  "version": "1.0.76",
+  "keywords": [
+    "symfony-ux"
+  ],
+  "autoload": {
+    "psr-4": {
+      "Wexample\\SymfonyTranslations\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Wexample\\SymfonyTranslations\\Tests\\": "tests/"
+    }
+  },
+  "authors": [
+    {
+      "name": "weeger",
+      "email": "romain.weeger@wexample.com"
+    }
+  ],
+  "require": {
+    "symfony/translation": ">=6.2",
+    "wexample/symfony-helpers": "1.0.89",
+    "wexample/symfony-testing": "1.0.76",
+    "wexample/php-helpers": "1.0.93",
+    "wexample/php-yaml": "1.0.61",
+    "wexample/symfony-template": "0.0.15"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "*",
+    "wexample/symfony-testing": "*"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../*",
+      "options": {
+        "symlink": true
+      }
+    }
+  ]
 }
