@@ -1,6 +1,6 @@
 # wexample/symfony-translations
 
-Version: 1.0.79
+Version: 1.0.80
 
 A translations service overrides to support translations files includes and multiple domains in Symfony translations
 
