@@ -18,6 +18,9 @@ class WexampleSymfonyTranslationsExtension extends AbstractWexampleSymfonyExtens
 
         $configuration = new Configuration();
         $paths = $this->processConfiguration($configuration, $configs);
-        $container->setParameter('translations_paths', $paths['translations_paths']);
+        $existing = $container->hasParameter('translations_paths')
+            ? (array) $container->getParameter('translations_paths')
+            : [];
+        $container->setParameter('translations_paths', array_merge($existing, $paths['translations_paths']));
     }
 }
