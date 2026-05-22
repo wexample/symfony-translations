@@ -2,8 +2,23 @@
 
 namespace Wexample\SymfonyTranslations\Translation;
 
+use function array_merge;
+use function array_pop;
+use function array_values;
+use function current;
+use function dirname;
+
 use Exception;
+
+use function explode;
+use function implode;
+
 use InvalidArgumentException;
+
+use function pathinfo;
+use function preg_match;
+use function str_replace;
+
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Translation\MessageCatalogueInterface;
@@ -15,18 +30,8 @@ use Wexample\Helpers\Helper\ClassHelper;
 use Wexample\Helpers\Helper\FileHelper;
 use Wexample\Helpers\Helper\VariableSpecialHelper;
 use Wexample\PhpYaml\YamlIncludeResolver;
-use Wexample\SymfonyTemplate\Helper\TemplateHelper;
 use Wexample\SymfonyHelpers\Helper\VariableHelper;
-use function array_merge;
-use function array_pop;
-use function array_values;
-use function current;
-use function dirname;
-use function explode;
-use function implode;
-use function pathinfo;
-use function preg_match;
-use function str_replace;
+use Wexample\SymfonyTemplate\Helper\TemplateHelper;
 
 class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface
 {
@@ -65,7 +70,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     /**
      * YAML resolvers for handling includes and references, one per locale
-     * @var array<YamlIncludeResolver> $yamlResolvers
+     * @var array<YamlIncludeResolver>
      */
     private array $yamlResolvers = [];
 
@@ -81,8 +86,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         public \Symfony\Bundle\FrameworkBundle\Translation\Translator $translator,
         KernelInterface $kernel,
         private readonly ParameterBagInterface $parameterBag
-    )
-    {
+    ) {
         // Initialize locales from the Symfony translator
         $this->addLocale($this->getLocale());
 
@@ -110,7 +114,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             array_merge(
                 $this->parameterBag->get('translations_paths') ?? [],
                 [
-                    $pathProject . '/translations/'
+                    $pathProject . '/translations/',
                 ]
             )
         );
@@ -132,14 +136,14 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     private function loadTranslationFilesForLocale(string $locale): void
     {
         // Create a resolver for this locale if it doesn't exist
-        if (!isset($this->yamlResolvers[$locale])) {
+        if (! isset($this->yamlResolvers[$locale])) {
             $this->yamlResolvers[$locale] = new YamlIncludeResolver();
         }
 
         $resolver = $this->yamlResolvers[$locale];
 
         foreach ($this->translationPaths as $key => $basePath) {
-            if (!is_dir($basePath)) {
+            if (! is_dir($basePath)) {
                 continue; // Skip non-existent directories
             }
 
@@ -148,8 +152,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 extension: FileHelper::FILE_EXTENSION_YML,
                 fileProcessor: function (
                     \SplFileInfo $file
-                ) use
-                (
+                ) use (
                     $locale,
                     $basePath,
                     $key,
@@ -163,11 +166,12 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
                         $domain = $this->buildDomainFromPath($filePath, $basePath, is_string($key) ? $key : null);
 
-                        if (!empty($domain)) {
+                        if (! empty($domain)) {
                             $resolver->registerFile($domain, $filePath);
                         }
                     }
-                });
+                }
+            );
         }
     }
 
@@ -194,7 +198,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     private function populateCatalogueForLocale(string $locale): void
     {
-        if (!isset($this->yamlResolvers[$locale])) {
+        if (! isset($this->yamlResolvers[$locale])) {
             return;
         }
 
@@ -211,7 +215,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             foreach ($domains as $domain) {
                 $values = $domainsContent[$domain] ?? [];
 
-                if (!empty($values)) {
+                if (! empty($values)) {
                     $resolvedValues = $resolver->resolveValues($values, $domain);
                     $flattenedValues = ArrayHelper::flattenArray($resolvedValues);
 
@@ -238,8 +242,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         string $filePath,
         string $basePath,
         ?string $bundleName = null
-    ): string
-    {
+    ): string {
         $info = (object) pathinfo($filePath);
 
         // Remove prefix from bundles keys.
@@ -247,7 +250,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             $bundleName = substr($bundleName, strlen('@'));
         }
 
-        if (!isset($info->extension) || FileHelper::FILE_EXTENSION_YML !== $info->extension) {
+        if (! isset($info->extension) || FileHelper::FILE_EXTENSION_YML !== $info->extension) {
             return '';
         }
 
@@ -269,7 +272,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         if (VariableSpecialHelper::EMPTY_STRING !== $subDir) {
             $domainParts = explode('/', $subDir);
 
-            if ($bundleName && !empty($domainParts) && $domainParts[0] === 'assets') {
+            if ($bundleName && ! empty($domainParts) && $domainParts[0] === 'assets') {
                 array_shift($domainParts);
             }
         }
@@ -302,13 +305,13 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function setDomainFromTemplatePath(
         string $name,
         string $path
-    ): string
-    {
+    ): string {
         $domain = self::buildDomainFromTemplatePath(
             TemplateHelper::trimPathPrefix($path)
         );
 
         $this->setDomain($name, $domain);
+
         return $domain;
     }
 
@@ -321,10 +324,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // The path format is valid.
         if ('.' !== $info->dirname) {
             return str_replace(
-                    '/',
-                    self::KEYS_SEPARATOR,
-                    $info->dirname
-                )
+                '/',
+                self::KEYS_SEPARATOR,
+                $info->dirname
+            )
                 . self::KEYS_SEPARATOR
                 . current(
                     explode(self::KEYS_SEPARATOR, $info->basename)
@@ -340,8 +343,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function setDomain(
         string $name,
         string $value
-    ): void
-    {
+    ): void {
         $this->domainsStack[$name][] = $value;
     }
 
@@ -350,7 +352,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     public function revertDomain(string $name): void
     {
-        if (isset($this->domainsStack[$name]) && !empty($this->domainsStack[$name])) {
+        if (isset($this->domainsStack[$name]) && ! empty($this->domainsStack[$name])) {
             array_pop($this->domainsStack[$name]);
         }
     }
@@ -365,7 +367,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     public function getDomain(string $name): ?string
     {
-        if (!isset($this->domainsStack[$name]) || empty($this->domainsStack[$name])) {
+        if (! isset($this->domainsStack[$name]) || empty($this->domainsStack[$name])) {
             return null;
         }
 
@@ -442,7 +444,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
         $locale = (string) $locale;
         unset($this->cataloguesPopulated[$locale]);
-        if (!isset($this->locales[$locale])) {
+        if (! isset($this->locales[$locale])) {
             $this->addLocale($locale);
             $this->loadTranslationFilesForLocale($locale);
             $this->populateCatalogueForLocale($locale);
@@ -481,8 +483,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         ?string $domain = null,
         ?string $locale = null,
         bool $forceTranslate = false
-    ): string
-    {
+    ): string {
         $this->ensureCataloguePopulated($locale);
 
         $default = $id;
@@ -520,7 +521,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             return;
         }
 
-        if (!isset($this->locales[$locale])) {
+        if (! isset($this->locales[$locale])) {
             $this->addLocale($locale);
             $this->loadTranslationFilesForLocale($locale);
         }
