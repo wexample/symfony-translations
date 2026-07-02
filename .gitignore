@@ -38,3 +38,13 @@ coverage*.lcov
 .scannerwork
 /vendor
 /.phpunit.cache
+/logs/
+/log/
+/.cache/
+/cache/
+/tmp/
+/temp/
+/build/
+/dist/
+/out/
+/coverage/
