@@ -1,6 +1,6 @@
 # symfony_translations
 
-Version: 2.0.3
+Version: 2.0.4
 
 A translations service overrides to support translations files includes and multiple domains in Symfony translations
 
