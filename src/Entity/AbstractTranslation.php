@@ -11,13 +11,13 @@ use Wexample\SymfonyHelpers\Entity\AbstractEntity;
  *
  *   #[ORM\ManyToOne(targetEntity: YourLocale::class)]
  *   #[ORM\JoinColumn(nullable: false)]
- *   protected Locale $locale;
+ *   protected YourLocale $locale;
  *
  * and a unique constraint on (locale, key):
  *
  *   #[ORM\UniqueConstraint(columns: ['locale_id', 'key'])]
  */
-abstract class Translation extends AbstractEntity
+abstract class AbstractTranslation extends AbstractEntity
 {
     #[ORM\Column(type: Types::STRING, length: 512)]
     protected string $key;
@@ -33,9 +33,9 @@ abstract class Translation extends AbstractEntity
         $this->updatedAt = new \DateTimeImmutable();
     }
 
-    abstract public function getLocale(): Locale;
+    abstract public function getLocale(): AbstractLocale;
 
-    abstract public function setLocale(Locale $locale): static;
+    abstract public function setLocale(AbstractLocale $locale): static;
 
     public function getKey(): string
     {

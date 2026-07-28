@@ -7,7 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Wexample\SymfonyHelpers\Entity\AbstractEntity;
 use Wexample\SymfonyHelpers\Entity\Traits\HasNameTrait;
 
-abstract class Locale extends AbstractEntity
+abstract class AbstractLocale extends AbstractEntity
 {
     use HasNameTrait;
 
