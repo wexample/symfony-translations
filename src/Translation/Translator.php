@@ -263,7 +263,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // gives: admin
         $subDir = FileHelper::buildRelativePath(
             $info->dirname,
-            rtrim($basePath, DIRECTORY_SEPARATOR)
+            dirname($basePath)
         );
 
         $domainParts = [];
