@@ -43,6 +43,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     final public const string DOMAIN_TYPE_COMPONENT = VariableHelper::COMPONENT;
 
+    final public const string DOMAIN_TYPE_ENTITY = VariableHelper::ENTITY;
+
     final public const string DOMAIN_TYPE_FORM = VariableHelper::FORM;
 
     final public const string DOMAIN_TYPE_LAYOUT = VariableHelper::LAYOUT;
@@ -102,6 +104,43 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
         // Populate catalogues
         $this->populateCatalogues();
+
+        // Build @entity.X aliases from all entity.X domains in the catalogue
+        $this->buildEntityAliases();
+    }
+
+    private function buildEntityAliases(): void
+    {
+        foreach (array_keys($this->translator->getCatalogue()->all()) as $domain) {
+            // Match any "<prefix>.entity.<name>" domain, wherever it comes from:
+            //   "front.entity.metric"                        -> alias "entity.metric"
+            //   "WexampleSymfonyMoneyBundle.entity.currency" -> alias "entity.currency"
+            if (preg_match('/(?:^|\.)' . self::DOMAIN_TYPE_ENTITY . '\.(.+)$/', $domain, $matches)) {
+                $alias = self::DOMAIN_TYPE_ENTITY . self::KEYS_SEPARATOR . $matches[1];
+
+                // First registered wins: app paths are loaded before bundle ones,
+                // so an app-level entity file overrides the bundle one.
+                if (! isset($this->domainsStack[$alias])) {
+                    $this->domainsStack[$alias] = [$domain];
+                }
+            }
+        }
+    }
+
+    /**
+     * Get all entity domain aliases (entity.X), e.g. for client-side alias resolution.
+     */
+    public function getEntityAliases(): array
+    {
+        $aliases = [];
+
+        foreach ($this->domainsStack as $alias => $stack) {
+            if (str_starts_with($alias, self::DOMAIN_TYPE_ENTITY . self::KEYS_SEPARATOR)) {
+                $aliases[$alias] = end($stack);
+            }
+        }
+
+        return $aliases;
     }
 
     /**
