@@ -5,12 +5,8 @@ services:
         public: false
 
     Wexample\SymfonyTranslations\:
-        resource: '../../{Command,Develop,Service,Twig}'
+        resource: '../../{Command,Service,Twig}'
         tags: ['controller.service_arguments']
-
-    Wexample\SymfonyTranslations\Develop\DevelopTranslationsTab:
-        tags:
-            - { name: 'wexample_symfony_loader.develop_tab' }
 
     # Override translation service.
     Wexample\SymfonyTranslations\Translation\Translator:

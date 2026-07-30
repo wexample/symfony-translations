@@ -166,6 +166,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
                         $domain = $this->buildDomainFromPath($filePath, $basePath, is_string($key) ? $key : null);
 
+                        dump(['key' => $key, 'basePath' => $basePath, 'file' => $filePath, 'domain' => $domain]);
+
                         if (! empty($domain)) {
                             $resolver->registerFile($domain, $filePath);
                         }
@@ -263,7 +265,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // gives: admin
         $subDir = FileHelper::buildRelativePath(
             $info->dirname,
-            dirname($basePath)
+            rtrim($basePath, DIRECTORY_SEPARATOR)
         );
 
         $domainParts = [];
