@@ -1,21 +1,3 @@
-# symfony_translations
-
-Version: 3.0.0
-
-`symfony_translations` is a Symfony bundle whose `Wexample\SymfonyTranslations\Translation\Translator` wraps the framework translator and builds one domain per translation file: it scans the project's `translations/` directory and every path listed in the `translations_paths` parameter for `*.<locale>.yml` files, derives the domain from each file's path, and resolves the YAML includes and cross-file references they contain before adding the result to the catalogue. Keys may carry their domain (`app.pages.home::title`), and a stack of named domains lets a template address its own file through an alias — `setDomain('page', 'app.pages.home')` makes `@page::title` resolve, and `revertDomain('page')` puts the previous one back.
-
-It is meant for Symfony applications that keep one small translation file per page, component, form or entity — the domain types the translator knows about — instead of a few large catalogues, and for the bundles that ship such files alongside the application's own.
-
-## Table of Contents
-
-- [Architecture](#architecture)
-- [Integration in the Suite](#integration-in-the-suite)
-- [Dependencies](#dependencies)
-- [Versioning & Compatibility Policy](#versioning--compatibility-policy)
-- [License](#license)
-- [About us](#about-us)
-- [Migration Notes](#migration-notes)
-
 ## Architecture
 
 The bundle is one service with satellites. `Wexample\SymfonyTranslations\Translation\Translator` decorates Symfony's `translator`, builds every catalogue itself from YAML files found on disk, and delegates the actual message formatting back to the framework translator it wraps. Everything else in src — two Twig extensions, three console commands, a pair of Doctrine base classes — either reads that service or lives beside it.
@@ -110,52 +92,3 @@ src/Entity/AbstractLocale.php, src/Entity/AbstractTranslation.php and the two ab
 src/Tests/AbstractTranslationTest.php ships inside `src/` — it is part of the public surface — and builds a `Translator` over a stubbed `SymfonyTranslator`, a stub kernel returning `__DIR__` as project dir, and a parameter bag returning one test path. The unit tests under tests/Unit exercise domain building, the stack, and flattening against it.
 
 tests/Integration/TranslationColdCacheTest.php is the one that runs the real thing: it deletes the kernel cache directory, boots tests/Fixtures/App/AppKernel.php — a fixture app registering only this bundle — renders `page.html.twig` and asserts it prints `Bonjour`. That covers the case the decoration is most fragile in, a container built from scratch. It runs in a separate process, with global handlers snapshotted.
-
-## Integration in the Suite
-
-This package is part of the Wexample Suite — a collection of high-quality, modular tools designed to work seamlessly together across multiple languages and environments.
-
-### Related Packages
-
-The suite includes packages for configuration management, file handling, prompts, and more. Each package can be used independently or as part of the integrated suite.
-
-Visit the [Wexample Suite documentation](https://docs.wexample.com) for the complete package ecosystem.
-
-## Dependencies
-
-- symfony/translation: >=6.2
-- wexample/symfony-helpers: >=5.0.0
-- wexample/symfony-testing: >=1.0.86
-- wexample/php-helpers: >=3.0.0
-- wexample/php-yaml: >=1.0.70
-- wexample/symfony-template: >=0.0.25
-
-## Versioning & Compatibility Policy
-
-Wexample packages follow **Semantic Versioning** (SemVer):
-
-- **MAJOR**: Breaking changes
-- **MINOR**: New features, backward compatible
-- **PATCH**: Bug fixes, backward compatible
-
-We maintain backward compatibility within major versions and provide clear migration guides for breaking changes.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-Free to use in both personal and commercial projects.
-
-## About us
-
-[Wexample](https://wexample.com) stands as a cornerstone of the digital ecosystem — a collective of seasoned engineers, researchers, and creators driven by a relentless pursuit of technological excellence. More than a media platform, it has grown into a vibrant community where innovation meets craftsmanship, and where every line of code reflects a commitment to clarity, durability, and shared intelligence.
-
-This packages suite embodies this spirit. Trusted by professionals and enthusiasts alike, it delivers a consistent, high-quality foundation for modern development — open, elegant, and battle-tested. Its reputation is built on years of collaboration, refinement, and rigorous attention to detail, making it a natural choice for those who demand both robustness and beauty in their tools.
-
-Wexample cultivates a culture of mastery. Each package, each contribution carries the mark of a community that values precision, ethics, and innovation — a community proud to shape the future of digital craftsmanship.
-
-## Migration Notes
-
-When upgrading between major versions, refer to the migration guides in the documentation.
-
-Breaking changes are clearly documented with upgrade paths and examples.
