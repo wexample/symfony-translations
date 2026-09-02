@@ -30,6 +30,8 @@ abstract class AbstractTranslation extends AbstractEntity
 
     public function __construct()
     {
+        parent::__construct();
+
         $this->updatedAt = new \DateTimeImmutable();
     }
 
