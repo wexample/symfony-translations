@@ -1,0 +1,5 @@
+description: Generalist agent, no specialization.
+model: claude-fable-5
+modes:
+  - talk
+  - structured
