@@ -1,6 +1,6 @@
 # symfony_translations
 
-Version: 4.0.1
+Version: 4.0.2
 
 `symfony_translations` is a Symfony bundle whose `Wexample\SymfonyTranslations\Translation\Translator` wraps the framework translator and builds one domain per translation file: it scans the project's `translations/` directory and every path listed in the `translations_paths` parameter for `*.<locale>.yml` files, derives the domain from each file's path, and resolves the YAML includes and cross-file references they contain before adding the result to the catalogue. Keys may carry their domain (`app.pages.home::title`), and a stack of named domains lets a template address its own file through an alias — `setDomain('page', 'app.pages.home')` makes `@page::title` resolve, and `revertDomain('page')` puts the previous one back.
 
@@ -123,10 +123,11 @@ Visit the [Wexample Suite documentation](https://docs.wexample.com) for the comp
 
 ## Dependencies
 
+- php: >=8.5
 - symfony/translation: >=6.2
-- wexample/symfony-helpers: >=7.0.0
-- wexample/symfony-testing: >=1.0.86
-- wexample/php-helpers: >=3.0.0
+- wexample/symfony-helpers: >=8.0.0
+- wexample/symfony-testing: >=2.0.0
+- wexample/php-helpers: >=4.0.0
 - wexample/php-yaml: >=1.0.70
 - wexample/symfony-template: >=0.0.25
 
