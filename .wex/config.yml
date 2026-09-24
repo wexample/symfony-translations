@@ -6,7 +6,7 @@ git:
 global:
   name: symfony_translations
   type: app
-  version: 4.0.4
+  version: 4.0.5
 wex:
   migration: 7
   version: 6.0.136
