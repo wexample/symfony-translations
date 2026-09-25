@@ -49,6 +49,12 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
     final public const string DOMAIN_TYPE_LAYOUT = VariableHelper::LAYOUT;
 
+    /**
+     * The mail being rendered: its template addresses its own file as
+     * `@mail::`, the way a page does with `@page::`.
+     */
+    final public const string DOMAIN_TYPE_MAIL = VariableHelper::MAIL;
+
     final public const string DOMAIN_TYPE_PAGE = VariableHelper::PAGE;
 
     final public const string DOMAIN_TYPE_PDF = \Wexample\SymfonyHelpers\Helper\FileHelper::FILE_EXTENSION_PDF;
