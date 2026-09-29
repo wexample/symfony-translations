@@ -182,6 +182,91 @@ class TranslationFileServiceTest extends TestCase
         $this->assertSame('fake', $this->readLock()['pages/a.fr.yml']['a']['engine']);
     }
 
+    public function testDryRunNeverReachesTheEngine(): void
+    {
+        $this->writeSource(['a' => 'One', 'b' => 'Two']);
+
+        $stats = $this->createService($this->createFailingEngine())->translateFiles('en', 'fr', dryRun: true);
+
+        $this->assertSame(2, $stats['translated']);
+    }
+
+    public function testAsksAgainNextRunForWhatTheEngineLeftOut(): void
+    {
+        $this->writeSource(['a' => 'One', 'b' => 'Two']);
+
+        $stats = $this->createService($this->createForgetfulEngine('b'))->translateFiles('en', 'fr');
+
+        $this->assertSame(['a' => 'FR(One)'], $this->readTarget());
+        $this->assertSame(1, $stats['untranslated']);
+        $this->assertArrayNotHasKey('b', $this->readLock()['pages/index.fr.yml']);
+
+        $stats = $this->createService($this->createEngine('fake'))->translateFiles('en', 'fr');
+
+        $this->assertSame(['a' => 'FR(One)', 'b' => 'FR(TWO)'], $this->readTarget());
+        $this->assertSame(1, $stats['translated']);
+    }
+
+    public function testKeepsThePreviousTranslationOfAChangedKeyLeftOut(): void
+    {
+        $this->writeSource(['a' => 'One']);
+        $this->createService($this->createEngine('fake'))->translateFiles('en', 'fr');
+
+        $this->writeSource(['a' => 'One changed']);
+        $this->createService($this->createForgetfulEngine('a'))->translateFiles('en', 'fr');
+
+        $this->assertSame(['a' => 'FR(ONE)'], $this->readTarget());
+
+        $this->createService($this->createEngine('fake'))->translateFiles('en', 'fr');
+        $this->assertSame(['a' => 'FR(ONE CHANGED)'], $this->readTarget());
+    }
+
+    private function createFailingEngine(): TextTranslatorInterface
+    {
+        return new class implements TextTranslatorInterface {
+            public function translate(
+                array $texts,
+                string $sourceLocale,
+                string $targetLocale
+            ): array {
+                throw new \LogicException('The engine was reached.');
+            }
+
+            public function getEngineName(): string
+            {
+                return 'fake';
+            }
+        };
+    }
+
+    /**
+     * Translates every text but the one under $forgottenKey, as a model skipping a line.
+     */
+    private function createForgetfulEngine(string $forgottenKey): TextTranslatorInterface
+    {
+        return new class($forgottenKey) implements TextTranslatorInterface {
+            public function __construct(
+                private readonly string $forgottenKey,
+            ) {
+            }
+
+            public function translate(
+                array $texts,
+                string $sourceLocale,
+                string $targetLocale
+            ): array {
+                unset($texts[$this->forgottenKey]);
+
+                return array_map(static fn (string $text): string => 'FR('.$text.')', $texts);
+            }
+
+            public function getEngineName(): string
+            {
+                return 'fake';
+            }
+        };
+    }
+
     private function readLock(): array
     {
         return json_decode(file_get_contents($this->dir.TranslationFileService::LOCK_FILE_NAME), true);

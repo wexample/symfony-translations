@@ -19,26 +19,27 @@ class TextTranslationService
 
     /**
      * @param array<array-key, string> $texts
-     * @return array<array-key, string> Under the keys of $texts
+     * @return array<array-key, string> Under the keys of $texts, without those the engine left out
      */
     public function translate(
         array $texts,
         string $sourceLocale,
         string $targetLocale
     ): array {
-        $translations = $texts;
+        $translations = [];
         $masked = [];
         $placeholders = [];
 
         foreach ($texts as $key => $text) {
-            if (! preg_match('/\p{L}/u', $text)) {
+            if (! preg_match('/\p{L}/u', $text) || $sourceLocale === $targetLocale) {
+                $translations[$key] = $text;
                 continue;
             }
 
             [$masked[$key], $placeholders[$key]] = TranslationPlaceholderHelper::mask($text);
         }
 
-        if (empty($masked) || $sourceLocale === $targetLocale) {
+        if (empty($masked)) {
             return $translations;
         }
 

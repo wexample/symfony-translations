@@ -79,14 +79,35 @@ class SyrtisTextTranslatorTest extends TestCase
         );
     }
 
-    public function testRefusesAReplyMissingKeys(): void
+    public function testAsksAgainForTheKeysLeftOut(): void
     {
-        $translator = $this->createTranslator([$this->reply(['a' => 'A'])]);
+        $translator = $this->createTranslator([
+            $this->reply(['a' => 'A']),
+            $this->reply(['b' => 'B']),
+        ]);
+
+        $this->assertSame(['a' => 'A', 'b' => 'B'], $translator->translate(['a' => 'a', 'b' => 'b'], 'fr', 'en'));
+        $this->assertSame(['b' => 'b'], json_decode($this->getSentMessages(1)[1]['content'], true));
+    }
+
+    public function testLeavesOutAKeyMissingTwice(): void
+    {
+        $translator = $this->createTranslator([
+            $this->reply(['a' => 'A']),
+            $this->reply([]),
+        ]);
+
+        $this->assertSame(['a' => 'A'], $translator->translate(['a' => 'a', 'b' => 'b'], 'fr', 'en'));
+        $this->assertCount(2, $this->history);
+    }
+
+    public function testRefusesAReplyThatIsNotJson(): void
+    {
+        $translator = $this->createTranslator([$this->reply('Sorry, I cannot help with that.')]);
 
         $this->expectException(TranslationReplyException::class);
-        $this->expectExceptionMessage('b');
 
-        $translator->translate(['a' => 'a', 'b' => 'b'], 'fr', 'en');
+        $translator->translate(['a' => 'a'], 'fr', 'en');
     }
 
     /**

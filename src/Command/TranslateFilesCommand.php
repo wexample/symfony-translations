@@ -99,6 +99,9 @@ class TranslateFilesCommand extends AbstractTranslationCommand
             static fn (string $targetPath) => $io->writeln(
                 sprintf(' %s <comment>source gone</comment>  %s', $dryRun ? '~' : '✗', $targetPath)
             ),
+            static fn (string $targetPath, array $keys) => $io->writeln(
+                sprintf(' <error>!</error> <comment>left out</comment>  %s: %s', $targetPath, implode(', ', $keys))
+            ),
         );
 
         if (! $dryRun && $this->localeConfigService->enableLocale($to)) {
@@ -106,14 +109,23 @@ class TranslateFilesCommand extends AbstractTranslationCommand
         }
 
         $io->success(sprintf(
-            '%s: %d source files, %d target files %s, %d texts translated, %d orphan files %s.',
+            '%s: %d source files, %d target files %s, %d texts %s, %d orphan files %s.',
             $to,
             $stats['files'],
             $stats['written'],
             $dryRun ? 'to write' : 'written',
             $stats['translated'],
+            $dryRun ? 'to translate' : 'translated',
             $stats['removed'],
             $dryRun ? 'to remove' : 'removed'
         ));
+
+        if ($stats['untranslated'] > 0) {
+            $io->warning(sprintf(
+                '%s: %d texts left out by the engine, read in the fallback locale meanwhile. Run the command again to ask for them.',
+                $to,
+                $stats['untranslated']
+            ));
+        }
     }
 }

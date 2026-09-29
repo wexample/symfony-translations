@@ -24,6 +24,10 @@ use Wexample\SymfonyTranslations\Interface\TextTranslatorInterface;
  * one of its keys. The source text is then kept as its translation.
  * Batches are cut to fit `max_batch_length` characters of texts, so that the
  * model's answer stays within its output.
+ *
+ * A model now and then skips a key of a long batch. The keys left out are asked
+ * once more, on their own; those still missing are left out of the result, for
+ * the caller to ask again later rather than lose the whole batch.
  */
 class SyrtisTextTranslator implements TextTranslatorInterface
 {
@@ -95,9 +99,28 @@ class SyrtisTextTranslator implements TextTranslatorInterface
 
     /**
      * @param array<array-key, string> $batch
-     * @return array<array-key, string>
+     * @return array<array-key, string> Without the keys left out twice
      */
     private function translateBatch(
+        array $batch,
+        string $sourceLocale,
+        string $targetLocale
+    ): array {
+        $translations = $this->requestTranslations($batch, $sourceLocale, $targetLocale);
+        $missing = array_diff_key($batch, $translations);
+
+        if ([] !== $missing) {
+            $translations += $this->requestTranslations($missing, $sourceLocale, $targetLocale);
+        }
+
+        return $translations;
+    }
+
+    /**
+     * @param array<array-key, string> $batch
+     * @return array<array-key, string> The keys of $batch the reply holds
+     */
+    private function requestTranslations(
         array $batch,
         string $sourceLocale,
         string $targetLocale
@@ -140,15 +163,12 @@ class SyrtisTextTranslator implements TextTranslatorInterface
             );
         }
 
-        $missing = array_diff(array_map('strval', array_keys($batch)), array_map('strval', array_keys($decoded)));
-        if ([] !== $missing) {
-            throw new TranslationReplyException(
-                'The translation scenario left keys out: '.implode(', ', $missing)
-            );
-        }
-
         $translations = [];
         foreach (array_keys($batch) as $key) {
+            if (! array_key_exists((string) $key, $decoded)) {
+                continue;
+            }
+
             $translation = (string) $decoded[(string) $key];
             $translations[$key] = self::REPLY_SAME === trim($translation) ? $batch[$key] : $translation;
         }

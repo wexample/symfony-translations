@@ -9,12 +9,16 @@ namespace Wexample\SymfonyTranslations\Interface;
  * Texts come in batches, as an engine answers a list faster than the same list
  * one call at a time. Placeholders are already masked by the caller, so an engine
  * only has to leave the `[#n]` tokens untouched.
+ *
+ * An engine may leave keys out of its answer — a model skipping a line of a long
+ * batch. Those stay untranslated and are asked again on the next run, so one
+ * forgotten text never costs the rest of the batch.
  */
 interface TextTranslatorInterface
 {
     /**
      * @param array<array-key, string> $texts
-     * @return array<array-key, string> The translations, under the keys of $texts
+     * @return array<array-key, string> The translations, under the keys of $texts it could translate
      */
     public function translate(
         array $texts,

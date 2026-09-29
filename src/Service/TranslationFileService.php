@@ -24,6 +24,11 @@ use Wexample\SymfonyTranslations\Translation\Translator;
  * A target file the lock knows, whose source is gone, is removed with its
  * entry, unless orphans are kept. One the lock does not know was not written
  * here, and is never touched.
+ *
+ * A key the engine left out gets no lock entry: the target keeps its previous
+ * translation, or goes without the key — read in the fallback locale — and the
+ * next run asks for it again. A dry run never reaches the engine: it counts
+ * what would be sent.
  */
 class TranslationFileService
 {
@@ -45,7 +50,8 @@ class TranslationFileService
      * @param bool $keepOrphans Keep the target files whose source is gone
      * @param callable(string $targetPath, int $translatedCount): void|null $onFile
      * @param callable(string $targetPath): void|null $onOrphan
-     * @return array{files: int, written: int, translated: int, removed: int}
+     * @param callable(string $targetPath, string[] $keys): void|null $onUntranslated Keys the engine left out
+     * @return array{files: int, written: int, translated: int, untranslated: int, removed: int}
      */
     public function translateFiles(
         string $sourceLocale,
@@ -57,8 +63,9 @@ class TranslationFileService
         bool $keepOrphans = false,
         ?callable $onFile = null,
         ?callable $onOrphan = null,
+        ?callable $onUntranslated = null,
     ): array {
-        $stats = ['files' => 0, 'written' => 0, 'translated' => 0, 'removed' => 0];
+        $stats = ['files' => 0, 'written' => 0, 'translated' => 0, 'untranslated' => 0, 'removed' => 0];
 
         foreach ($this->getBasePaths($includeBundles) as $basePath) {
             $lockPath = $basePath.self::LOCK_FILE_NAME;
@@ -75,20 +82,23 @@ class TranslationFileService
 
                 $existingTarget = is_file($targetPath) ? Yaml::parseFile($targetPath) : null;
 
-                [$target, $translatedCount] = $this->translateTree(
+                [$target, $translatedCount, $untranslatedKeys] = $this->translateTree(
                     Yaml::parseFile($sourcePath) ?? [],
                     $existingTarget ?? [],
                     $fileLock,
                     $sourceLocale,
                     $targetLocale,
-                    $force
+                    $force,
+                    $dryRun
                 );
 
                 $stats['files']++;
                 $stats['translated'] += $translatedCount;
+                $stats['untranslated'] += count($untranslatedKeys);
 
-                // Compared as data: a file written by hand is not rewritten for its layout alone.
-                $changed = null === $existingTarget || $target != $existingTarget;
+                // Compared as data: a file written by hand is not rewritten for its layout alone,
+                // and a file the engine left empty is not created.
+                $changed = null === $existingTarget ? [] !== $target : $target != $existingTarget;
 
                 if ($changed) {
                     $stats['written']++;
@@ -108,6 +118,10 @@ class TranslationFileService
 
                 if ($onFile && $changed) {
                     $onFile($targetPath, $translatedCount);
+                }
+
+                if ($onUntranslated && [] !== $untranslatedKeys) {
+                    $onUntranslated($targetPath, $untranslatedKeys);
                 }
             }
 
@@ -162,7 +176,8 @@ class TranslationFileService
      * from the source is gone from the target.
      *
      * @param array<string, array{hash: string, engine: string}> $fileLock Updated in place
-     * @return array{0: array, 1: int} The target tree and the number of texts sent to the engine
+     * @return array{0: array, 1: int, 2: string[]} The target tree, the number of texts translated
+     *                                                — or to translate, on a dry run — and the keys the engine left out
      */
     private function translateTree(
         array $source,
@@ -170,7 +185,8 @@ class TranslationFileService
         array &$fileLock,
         string $sourceLocale,
         string $targetLocale,
-        bool $force
+        bool $force,
+        bool $dryRun
     ): array {
         $leaves = [];
         $this->collectLeaves($source, [], $leaves);
@@ -206,9 +222,14 @@ class TranslationFileService
             }
         }
 
-        $translations = empty($toTranslate)
-            ? []
-            : $this->textTranslationService->translate($toTranslate, $sourceLocale, $targetLocale);
+        if (empty($toTranslate) || $dryRun) {
+            ksort($keptLock);
+            $fileLock = $keptLock;
+
+            return [$target, count($toTranslate), []];
+        }
+
+        $translations = $this->textTranslationService->translate($toTranslate, $sourceLocale, $targetLocale);
 
         foreach ($translations as $key => $translation) {
             $this->setAt($target, $leaves[$key][0], $translation);
@@ -218,10 +239,27 @@ class TranslationFileService
             ];
         }
 
+        $untranslated = array_diff_key($toTranslate, $translations);
+
+        foreach (array_keys($untranslated) as $key) {
+            $path = $leaves[$key][0];
+            $existing = $this->getAt($existingTarget, $path);
+
+            if (null === $existing) {
+                $this->unsetAt($target, $path);
+            } else {
+                // Its old entry, if any, no longer matches the source: asked again next run.
+                $this->setAt($target, $path, $existing);
+                if (isset($fileLock[$key])) {
+                    $keptLock[$key] = $fileLock[$key];
+                }
+            }
+        }
+
         ksort($keptLock);
         $fileLock = $keptLock;
 
-        return [$target, count($toTranslate)];
+        return [$target, count($translations), array_map('strval', array_keys($untranslated))];
     }
 
     /**
@@ -270,6 +308,28 @@ class TranslationFileService
         }
 
         return $tree;
+    }
+
+    /**
+     * Removes a leaf, and the branches it leaves empty.
+     */
+    private function unsetAt(
+        array &$tree,
+        array $path
+    ): void {
+        $key = array_shift($path);
+
+        if ([] === $path) {
+            unset($tree[$key]);
+
+            return;
+        }
+
+        $this->unsetAt($tree[$key], $path);
+
+        if ([] === $tree[$key]) {
+            unset($tree[$key]);
+        }
     }
 
     private function setAt(
