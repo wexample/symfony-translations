@@ -71,4 +71,21 @@ services:
 
 Its `getEngineName()` is stored next to each translation; what the pending one produced is redone on the next run of either command, and on the next read of a field.
 
-`syrtis/symfony-engine` is such an engine, translating through a Syrtis scenario once its `translation` is configured.
+### Translate with Syrtis
+
+```yaml
+# config/packages/wexample_symfony_translations.yaml
+wexample_symfony_translations:
+    syrtis:
+        api_key: '%env(SYRTIS_API_KEY)%'
+        session_secure_id: ses_...       # a session on the translation scenario
+        host: https://api.syrtis.ai      # the default
+        max_batch_length: 6000           # characters of texts per request, the default
+```
+
+Translations are then made by a Syrtis scenario and recorded under the engine name `syrtis`. Texts go by batch — a whole file, cut when its texts exceed `max_batch_length` characters, as the model answers a batch in one go. Each request sends to the session two messages stamped `translate`:
+
+- `LANG_CONFIG`, JSON: `{"source": "fr", "target": "en_GB"}`. Locales are Symfony's identifiers, as they are: the scenario follows them, nothing converts them.
+- a conversation message, JSON: the texts by key, `{"page.title": "Bienvenue [#0]", "7": "Payer"}`.
+
+The scenario answers with a conversation message holding a JSON object of the translations under the same keys, leaving the `[#n]` placeholders untouched. A reply that is not a JSON object, or leaves keys out, stops the command: nothing is recorded as translated.

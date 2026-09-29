@@ -1,0 +1,133 @@
+<?php
+
+namespace Wexample\SymfonyTranslations\Tests\Unit\Translation;
+
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Response;
+use PHPUnit\Framework\TestCase;
+use SyrtisClient\Common\SyrtisClient;
+use Wexample\SymfonyTranslations\Exception\TranslationReplyException;
+use Wexample\SymfonyTranslations\Translation\SyrtisTextTranslator;
+
+class SyrtisTextTranslatorTest extends TestCase
+{
+    /** @var array<int, array{request: \Psr\Http\Message\RequestInterface}> */
+    private array $history = [];
+
+    public function testTranslatesABatchUnderTheSameKeys(): void
+    {
+        $translator = $this->createTranslator([
+            $this->reply(['title' => 'Hello [#0]', 3 => 'Your order is ready.']),
+        ]);
+
+        $translations = $translator->translate(
+            ['title' => 'Bonjour [#0]', 3 => 'Votre commande est prête.'],
+            'fr',
+            'en_GB'
+        );
+
+        $this->assertSame(['title' => 'Hello [#0]', 3 => 'Your order is ready.'], $translations);
+
+        [$config, $texts] = $this->getSentMessages(0);
+        $this->assertSame('LANG_CONFIG', $config['name']);
+        $this->assertSame(['source' => 'fr', 'target' => 'en_GB'], json_decode($config['content'], true));
+        $this->assertSame(['translate'], $texts['stamps']);
+        $this->assertSame(
+            ['title' => 'Bonjour [#0]', '3' => 'Votre commande est prête.'],
+            json_decode($texts['content'], true)
+        );
+    }
+
+    public function testCutsBatchesToTheirMaximumLength(): void
+    {
+        $translator = $this->createTranslator(
+            [
+                $this->reply(['a' => 'A', 'b' => 'B']),
+                $this->reply(['c' => 'C']),
+            ],
+            maxBatchLength: 10
+        );
+
+        $translations = $translator->translate(['a' => 'aaaa', 'b' => 'bbbb', 'c' => 'cccc'], 'fr', 'en');
+
+        $this->assertSame(['a' => 'A', 'b' => 'B', 'c' => 'C'], $translations);
+        $this->assertCount(2, $this->history);
+    }
+
+    public function testRefusesAReplyMissingKeys(): void
+    {
+        $translator = $this->createTranslator([$this->reply(['a' => 'A'])]);
+
+        $this->expectException(TranslationReplyException::class);
+        $this->expectExceptionMessage('b');
+
+        $translator->translate(['a' => 'a', 'b' => 'b'], 'fr', 'en');
+    }
+
+    /**
+     * @param Response[] $responses
+     */
+    private function createTranslator(
+        array $responses,
+        int $maxBatchLength = 6000
+    ): SyrtisTextTranslator {
+        $stack = HandlerStack::create(new MockHandler($responses));
+        $stack->push(Middleware::history($this->history));
+
+        return new SyrtisTextTranslator(
+            new SyrtisClient(
+                host: 'https://syrtis.test',
+                apiKey: 'test-key',
+                httpClient: new Client(['handler' => $stack]),
+            ),
+            'ses_test',
+            $maxBatchLength
+        );
+    }
+
+    /**
+     * The sync answer of the API: the request's messages, the reply last.
+     *
+     * @param array<array-key, string> $translations
+     */
+    private function reply(array $translations): Response
+    {
+        return new Response(200, ['Content-Type' => 'application/json'], json_encode([
+            'type' => 'success',
+            'code' => 200,
+            'data' => [
+                'messages' => [
+                    [
+                        'type' => 'message',
+                        'entity' => [
+                            'secureId' => 'mes_reply',
+                            'content' => json_encode((object) $translations),
+                            'contentType' => 'conversation',
+                            'format' => 'text',
+                            'name' => null,
+                            'origin' => 'node',
+                        ],
+                        'metadata' => [],
+                        'relationships' => [],
+                    ],
+                ],
+            ],
+        ]));
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function getSentMessages(int $requestIndex): array
+    {
+        $body = (string) $this->history[$requestIndex]['request']->getBody();
+
+        // Multipart: the whole payload travels as JSON in a "data" field.
+        preg_match('/name="data"\r\n(?:[^\r\n]+\r\n)*\r\n(.*?)\r\n--/s', $body, $match);
+
+        return json_decode($match[1], true)['messages'];
+    }
+}

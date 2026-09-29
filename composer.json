@@ -26,6 +26,7 @@
   "require": {
     "php": ">=8.5",
     "symfony/translation": ">=6.2",
+    "syrtis/php-client": ">=4.0.0",
     "wexample/symfony-helpers": ">=11.0.0",
     "wexample/symfony-testing": ">=3.0.0",
     "wexample/php-helpers": ">=4.0.0",

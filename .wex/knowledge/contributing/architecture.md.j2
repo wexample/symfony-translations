@@ -84,7 +84,9 @@ The fallback is done here because Symfony's own cannot: its fallback catalogues 
 
 ### One way to the engine
 
-{{ path("src/Interface/TextTranslatorInterface.php") }} takes a batch of texts and returns it under the same keys, and names its engine. {{ path("src/Service/PendingTextTranslator.php") }} is the default: it returns the texts untouched, its engine name is `pending`. An engine replaces it by aliasing the interface: `syrtis/symfony-engine` does, through a compiler pass, so that the bundles' order does not matter.
+{{ path("src/Interface/TextTranslatorInterface.php") }} takes a batch of texts and returns it under the same keys, and names its engine. {{ path("src/Service/PendingTextTranslator.php") }} is the default: it returns the texts untouched, its engine name is `pending`. An engine replaces it by aliasing the interface.
+
+{{ path("src/Translation/SyrtisTextTranslator.php") }} is the engine the `syrtis` configuration enables, through `syrtis/php-client`. It cuts the texts into batches of `max_batch_length` characters, sends each to the session with `SessionRepository::sendMessage(sync: true)` and reads the first reply (`Message::isReply()`): a JSON object of the translations, checked for every key of the batch, or a {{ path("src/Exception/TranslationReplyException.php") }}. It sits outside `Service/`, which is registered as a whole: it only becomes a service once configured, with a Syrtis client of its own. This dependency of the bundle on Syrtis is a first step; the engine moves out when another one comes.
 
 Nothing calls the engine directly. {{ path("src/Service/TextTranslationService.php") }} skips texts with no letter in them, masks parameters and markup with `[#n]` tokens through {{ path("src/Helper/TranslationPlaceholderHelper.php") }} and restores them afterwards. Its `hashSource()` is what every stored translation is checked against.
 

@@ -956,6 +956,13 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
  *         enabled?: bool, // Default: false
  *         excluded_paths?: list<scalar|null>,
  *     },
+ *     syrtis?: bool|array{
+ *         enabled?: bool, // Default: false
+ *         host?: scalar|null, // Default: "https://api.syrtis.ai"
+ *         api_key: scalar|null,
+ *         session_secure_id: scalar|null,
+ *         max_batch_length?: int, // Default: 6000
+ *     },
  * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,

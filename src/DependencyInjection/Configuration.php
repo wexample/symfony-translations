@@ -20,6 +20,14 @@ class Configuration implements ConfigurationInterface
         '^/robots\.txt$',
     ];
 
+    final public const string DEFAULT_SYRTIS_HOST = 'https://api.syrtis.ai';
+
+    /**
+     * Characters of texts sent to Syrtis in one request: the model answers
+     * them in one go, so a batch must fit its output.
+     */
+    final public const int DEFAULT_SYRTIS_MAX_BATCH_LENGTH = 6000;
+
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('wexample_symfony_translations');
@@ -36,6 +44,29 @@ class Configuration implements ConfigurationInterface
                         ->arrayNode('excluded_paths')
                             ->scalarPrototype()->end()
                             ->defaultValue(self::DEFAULT_LOCALE_EXCLUDED_PATHS)
+                        ->end()
+                    ->end()
+                ->end()
+                // Translates through a session on a Syrtis translation scenario.
+                ->arrayNode('syrtis')
+                    ->canBeEnabled()
+                    ->children()
+                        // The Syrtis API, or a local Syrtis answering the same routes.
+                        ->scalarNode('host')
+                            ->defaultValue(self::DEFAULT_SYRTIS_HOST)
+                            ->cannotBeEmpty()
+                        ->end()
+                        ->scalarNode('api_key')
+                            ->isRequired()
+                            ->cannotBeEmpty()
+                        ->end()
+                        ->scalarNode('session_secure_id')
+                            ->isRequired()
+                            ->cannotBeEmpty()
+                        ->end()
+                        ->integerNode('max_batch_length')
+                            ->defaultValue(self::DEFAULT_SYRTIS_MAX_BATCH_LENGTH)
+                            ->min(1)
                         ->end()
                     ->end()
                 ->end()

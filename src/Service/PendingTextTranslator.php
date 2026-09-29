@@ -20,8 +20,8 @@ class PendingTextTranslator implements TextTranslatorInterface
         string $sourceLocale,
         string $targetLocale
     ): array {
-        // A real engine replaces this one by aliasing the interface: syrtis/symfony-engine
-        // does it when its translation is enabled.
+        // A real engine replaces this one by aliasing the interface, as the
+        // `syrtis` configuration does.
         return $texts;
     }
 
