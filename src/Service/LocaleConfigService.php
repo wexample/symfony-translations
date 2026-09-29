@@ -26,16 +26,21 @@ class LocaleConfigService
      */
     public function enableLocale(string $locale): bool
     {
-        $locales = $this->localeService->getLocales();
-
-        if (in_array($locale, $locales, true)) {
-            return false;
-        }
-
         $path = $this->projectDir.'/'.self::CONFIG_FILE;
 
         if (! is_file($path)) {
             throw new \RuntimeException('No translation config to enable the locale in: '.$path);
+        }
+
+        // Read from the file, not the container: a run enabling several locales
+        // would otherwise start each time from the list it was compiled with.
+        $locales = array_values(array_unique([
+            $this->localeService->getDefaultLocale(),
+            ...(Yaml::parseFile($path)['framework']['enabled_locales'] ?? []),
+        ]));
+
+        if (in_array($locale, $locales, true)) {
+            return false;
         }
 
         $line = '    enabled_locales: '.Yaml::dump([...$locales, $locale], 0);
