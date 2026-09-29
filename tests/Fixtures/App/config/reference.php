@@ -963,6 +963,8 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
  *         api_key: scalar|null,
  *         session_secure_id: scalar|null,
  *         max_batch_length?: int, // Default: 6000
+ *         timeout?: int, // Default: 180
+ *         connect_timeout?: int, // Default: 10
  *     },
  * }
  * @psalm-type ConfigType = array{
