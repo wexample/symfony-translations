@@ -19,6 +19,9 @@ use Wexample\SymfonyTranslations\Interface\TextTranslatorInterface;
  *
  * It answers with a conversation message holding a JSON object of the
  * translations under the same keys, leaving `[#n]` placeholders untouched.
+ * A text already written in the target language comes back as `__SAME__`
+ * ("Salut" asked in French): the whole reply for the batch, or the value of
+ * one of its keys. The source text is then kept as its translation.
  * Batches are cut to fit `max_batch_length` characters of texts, so that the
  * model's answer stays within its output.
  */
@@ -29,6 +32,8 @@ class SyrtisTextTranslator implements TextTranslatorInterface
     final public const string MESSAGE_NAME_LANG_CONFIG = 'LANG_CONFIG';
 
     final public const string STAMP_TRANSLATE = 'translate';
+
+    final public const string REPLY_SAME = '__SAME__';
 
     public function __construct(
         private readonly SyrtisClient $client,
@@ -121,12 +126,17 @@ class SyrtisTextTranslator implements TextTranslatorInterface
             sync: true,
         );
 
-        $reply = $this->findReply($messages);
-        $decoded = json_decode((string) $reply->getContent(), true);
+        $content = trim((string) $this->findReply($messages)->getContent());
+
+        if (self::REPLY_SAME === $content) {
+            return $batch;
+        }
+
+        $decoded = json_decode($content, true);
 
         if (! is_array($decoded)) {
             throw new TranslationReplyException(
-                'The translation scenario did not answer a JSON object: '.mb_substr((string) $reply->getContent(), 0, 200)
+                'The translation scenario did not answer a JSON object: '.mb_substr($content, 0, 200)
             );
         }
 
@@ -139,7 +149,8 @@ class SyrtisTextTranslator implements TextTranslatorInterface
 
         $translations = [];
         foreach (array_keys($batch) as $key) {
-            $translations[$key] = (string) $decoded[(string) $key];
+            $translation = (string) $decoded[(string) $key];
+            $translations[$key] = self::REPLY_SAME === trim($translation) ? $batch[$key] : $translation;
         }
 
         return $translations;

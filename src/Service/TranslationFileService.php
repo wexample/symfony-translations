@@ -17,7 +17,13 @@ use Wexample\SymfonyTranslations\Translation\Translator;
  * since it was translated. What the target holds without a trace in the lock —
  * a wording written by hand — is kept as it is. The lock sits at the root of
  * each translations directory and records, per target file and key, the hash of
- * the source the translation was made from and the engine that made it.
+ * the source the translation was made from and the engine that made it. It is
+ * written after each file, so that an interrupted run leaves no translation
+ * looking as if it were written by hand.
+ *
+ * A target file the lock knows, whose source is gone, is removed with its
+ * entry, unless orphans are kept. One the lock does not know was not written
+ * here, and is never touched.
  */
 class TranslationFileService
 {
@@ -36,8 +42,10 @@ class TranslationFileService
      * @param string|null $pathFilter Only the source files whose path contains it
      * @param bool $force Translate again what an engine already translated, keeping what was written by hand
      * @param bool $includeBundles Also write into the bundles' own translation directories
+     * @param bool $keepOrphans Keep the target files whose source is gone
      * @param callable(string $targetPath, int $translatedCount): void|null $onFile
-     * @return array{files: int, written: int, translated: int}
+     * @param callable(string $targetPath): void|null $onOrphan
+     * @return array{files: int, written: int, translated: int, removed: int}
      */
     public function translateFiles(
         string $sourceLocale,
@@ -46,14 +54,15 @@ class TranslationFileService
         bool $force = false,
         bool $dryRun = false,
         bool $includeBundles = false,
+        bool $keepOrphans = false,
         ?callable $onFile = null,
+        ?callable $onOrphan = null,
     ): array {
-        $stats = ['files' => 0, 'written' => 0, 'translated' => 0];
+        $stats = ['files' => 0, 'written' => 0, 'translated' => 0, 'removed' => 0];
 
         foreach ($this->getBasePaths($includeBundles) as $basePath) {
             $lockPath = $basePath.self::LOCK_FILE_NAME;
             $lock = is_file($lockPath) ? json_decode(file_get_contents($lockPath), true, flags: JSON_THROW_ON_ERROR) : [];
-            $lockChanged = false;
 
             foreach ($this->findSourceFiles($basePath, $sourceLocale) as $sourcePath) {
                 if (null !== $pathFilter && ! str_contains($sourcePath, $pathFilter)) {
@@ -91,7 +100,10 @@ class TranslationFileService
 
                 if ($fileLock !== ($lock[$targetKey] ?? [])) {
                     $lock[$targetKey] = $fileLock;
-                    $lockChanged = true;
+
+                    if (! $dryRun) {
+                        $this->writeLock($lockPath, $lock);
+                    }
                 }
 
                 if ($onFile && $changed) {
@@ -99,16 +111,50 @@ class TranslationFileService
                 }
             }
 
-            if ($lockChanged && ! $dryRun) {
-                ksort($lock);
-                file_put_contents(
-                    $lockPath,
-                    json_encode($lock, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n"
-                );
+            if ($keepOrphans) {
+                continue;
+            }
+
+            $targetSuffix = '.'.$targetLocale.'.yml';
+
+            foreach (array_keys($lock) as $targetKey) {
+                $targetPath = $basePath.$targetKey;
+
+                if (! str_ends_with($targetKey, $targetSuffix)
+                    || (null !== $pathFilter && ! str_contains($targetPath, $pathFilter))
+                    || is_file(substr($targetPath, 0, -strlen($targetSuffix)).'.'.$sourceLocale.'.yml')) {
+                    continue;
+                }
+
+                $stats['removed']++;
+                unset($lock[$targetKey]);
+
+                if (! $dryRun) {
+                    if (is_file($targetPath)) {
+                        unlink($targetPath);
+                    }
+
+                    $this->writeLock($lockPath, $lock);
+                }
+
+                if ($onOrphan) {
+                    $onOrphan($targetPath);
+                }
             }
         }
 
         return $stats;
+    }
+
+    private function writeLock(
+        string $lockPath,
+        array $lock
+    ): void {
+        ksort($lock);
+        file_put_contents(
+            $lockPath,
+            json_encode($lock, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n"
+        );
     }
 
     /**

@@ -57,6 +57,28 @@ class SyrtisTextTranslatorTest extends TestCase
         $this->assertCount(2, $this->history);
     }
 
+    public function testKeepsTheSourceOfABatchAnsweredAsTheSame(): void
+    {
+        $translator = $this->createTranslator([$this->reply('__SAME__')]);
+
+        $this->assertSame(
+            ['greeting' => 'Salut'],
+            $translator->translate(['greeting' => 'Salut'], 'en', 'fr')
+        );
+    }
+
+    public function testKeepsTheSourceOfAKeyAnsweredAsTheSame(): void
+    {
+        $translator = $this->createTranslator([
+            $this->reply(['greeting' => '__SAME__', 'thanks' => 'Merci']),
+        ]);
+
+        $this->assertSame(
+            ['greeting' => 'Salut', 'thanks' => 'Merci'],
+            $translator->translate(['greeting' => 'Salut', 'thanks' => 'Thanks'], 'en', 'fr')
+        );
+    }
+
     public function testRefusesAReplyMissingKeys(): void
     {
         $translator = $this->createTranslator([$this->reply(['a' => 'A'])]);
@@ -91,9 +113,9 @@ class SyrtisTextTranslatorTest extends TestCase
     /**
      * The sync answer of the API: the request's messages, the reply last.
      *
-     * @param array<array-key, string> $translations
+     * @param array<array-key, string>|string $translations The translations, or the raw reply
      */
-    private function reply(array $translations): Response
+    private function reply(array|string $translations): Response
     {
         return new Response(200, ['Content-Type' => 'application/json'], json_encode([
             'type' => 'success',
@@ -104,7 +126,7 @@ class SyrtisTextTranslatorTest extends TestCase
                         'type' => 'message',
                         'entity' => [
                             'secureId' => 'mes_reply',
-                            'content' => json_encode((object) $translations),
+                            'content' => is_string($translations) ? $translations : json_encode((object) $translations),
                             'contentType' => 'conversation',
                             'format' => 'text',
                             'name' => null,

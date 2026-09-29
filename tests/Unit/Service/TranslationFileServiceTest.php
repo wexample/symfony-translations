@@ -112,6 +112,81 @@ class TranslationFileServiceTest extends TestCase
         $this->assertFileDoesNotExist($this->dir.TranslationFileService::LOCK_FILE_NAME);
     }
 
+    public function testRemovesATranslatedFileWhoseSourceIsGone(): void
+    {
+        $this->writeSource(['a' => 'One']);
+        $service = $this->createService($this->createEngine('fake'));
+        $service->translateFiles('en', 'fr');
+
+        unlink($this->dir.'pages/index.en.yml');
+        $stats = $service->translateFiles('en', 'fr');
+
+        $this->assertSame(1, $stats['removed']);
+        $this->assertFileDoesNotExist($this->dir.'pages/index.fr.yml');
+        $this->assertArrayNotHasKey('pages/index.fr.yml', $this->readLock());
+    }
+
+    public function testKeepsOrphansWhenAsked(): void
+    {
+        $this->writeSource(['a' => 'One']);
+        $service = $this->createService($this->createEngine('fake'));
+        $service->translateFiles('en', 'fr');
+
+        unlink($this->dir.'pages/index.en.yml');
+        $stats = $service->translateFiles('en', 'fr', keepOrphans: true);
+
+        $this->assertSame(0, $stats['removed']);
+        $this->assertFileExists($this->dir.'pages/index.fr.yml');
+    }
+
+    public function testNeverRemovesAFileItDidNotWrite(): void
+    {
+        file_put_contents($this->dir.'pages/other.fr.yml', Yaml::dump(['a' => 'Écrit à la main']));
+
+        $stats = $this->createService($this->createEngine('fake'))->translateFiles('en', 'fr');
+
+        $this->assertSame(0, $stats['removed']);
+        $this->assertFileExists($this->dir.'pages/other.fr.yml');
+    }
+
+    public function testLocksEachFileBeforeTheNextOne(): void
+    {
+        file_put_contents($this->dir.'pages/a.en.yml', Yaml::dump(['a' => 'One']));
+        file_put_contents($this->dir.'pages/b.en.yml', Yaml::dump(['b' => 'Two']));
+
+        $engine = new class implements TextTranslatorInterface {
+            public function translate(
+                array $texts,
+                string $sourceLocale,
+                string $targetLocale
+            ): array {
+                if (isset($texts['b'])) {
+                    throw new \RuntimeException('Engine down');
+                }
+
+                return array_map(static fn (string $text): string => 'FR('.$text.')', $texts);
+            }
+
+            public function getEngineName(): string
+            {
+                return 'fake';
+            }
+        };
+
+        try {
+            $this->createService($engine)->translateFiles('en', 'fr');
+            $this->fail('The engine failure should stop the run.');
+        } catch (\RuntimeException) {
+        }
+
+        $this->assertSame('fake', $this->readLock()['pages/a.fr.yml']['a']['engine']);
+    }
+
+    private function readLock(): array
+    {
+        return json_decode(file_get_contents($this->dir.TranslationFileService::LOCK_FILE_NAME), true);
+    }
+
     private function writeSource(array $data): void
     {
         file_put_contents($this->dir.'pages/index.en.yml', Yaml::dump($data));

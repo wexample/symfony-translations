@@ -27,7 +27,7 @@ php bin/console translations:translate-files fr
 
 Writes a `.fr.yml` next to every `.en.yml` of the application, then adds `fr` to `framework.enabled_locales` in `config/packages/translation.yaml`. Only the application's own files: the bundles' belong to their packages. `--include-bundles` writes into them as well, which is what a developer working on the bundles through symlinks wants.
 
-A key is translated when the target file lacks it, or when its source changed since. A wording already in the target file without a trace in the `.translations.lock.json` beside it was written by hand, and is never overwritten. References (`@page::title`), the `%` wildcard and `~extends` are copied as they are; parameters (`%name%`, `{count}`) and markup never reach the engine.
+A key is translated when the target file lacks it, or when its source changed since. A wording already in the target file without a trace in the `.translations.lock.json` beside it was written by hand, and is never overwritten. References (`@page::title`), the `%` wildcard and `~extends` are copied as they are; parameters (`%name%`, `{count}`) and markup never reach the engine. A target file the lock knows whose source file is gone is removed with its lock entry; one the lock does not know was not written by the command, and stays.
 
 | Option | |
 |---|---|
@@ -35,6 +35,8 @@ A key is translated when the target file lacks it, or when its source changed si
 | `--path=<text>` | Only the source files whose path contains it |
 | `--from=<locale>` | Translate from another locale than the default one |
 | `--force` | Translate again what an engine translated; hand-written wording is kept |
+| `--keep-orphans` | Keep the translated files whose source file is gone |
+| `--include-bundles` | Also write into the bundles' translation directories |
 
 A key missing in a language is read in the fallback one, so a page translated in part shows the rest in the default language rather than raw keys.
 

@@ -46,6 +46,7 @@ class TranslateFilesCommand extends AbstractTranslationCommand
             ->addOption('path', null, InputOption::VALUE_REQUIRED, 'Only the files whose path contains this string')
             ->addOption('include-bundles', null, InputOption::VALUE_NONE, 'Also write into the translation directories of the bundles, which belong to their packages')
             ->addOption('force', null, InputOption::VALUE_NONE, 'Translate again what an engine already translated; wording written by hand is kept')
+            ->addOption('keep-orphans', null, InputOption::VALUE_NONE, 'Keep the translated files whose source file is gone, removed otherwise')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Report what would be written, write nothing');
     }
 
@@ -77,8 +78,12 @@ class TranslateFilesCommand extends AbstractTranslationCommand
             (bool) $input->getOption('force'),
             $dryRun,
             (bool) $input->getOption('include-bundles'),
+            (bool) $input->getOption('keep-orphans'),
             static fn (string $targetPath, int $translatedCount) => $io->writeln(
                 sprintf(' %s <comment>%d</comment>  %s', $dryRun ? '~' : '✓', $translatedCount, $targetPath)
+            ),
+            static fn (string $targetPath) => $io->writeln(
+                sprintf(' %s <comment>source gone</comment>  %s', $dryRun ? '~' : '✗', $targetPath)
             ),
         );
 
@@ -87,11 +92,13 @@ class TranslateFilesCommand extends AbstractTranslationCommand
         }
 
         $io->success(sprintf(
-            '%d source files, %d target files %s, %d texts translated.',
+            '%d source files, %d target files %s, %d texts translated, %d orphan files %s.',
             $stats['files'],
             $stats['written'],
             $dryRun ? 'to write' : 'written',
-            $stats['translated']
+            $stats['translated'],
+            $stats['removed'],
+            $dryRun ? 'to remove' : 'removed'
         ));
 
         return Command::SUCCESS;
