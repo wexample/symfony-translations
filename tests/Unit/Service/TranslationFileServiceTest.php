@@ -221,6 +221,48 @@ class TranslationFileServiceTest extends TestCase
         $this->assertSame(['a' => 'FR(ONE CHANGED)'], $this->readTarget());
     }
 
+    public function testKeepsTheEntriesOfARunForAnotherLocaleWritingMeanwhile(): void
+    {
+        $this->writeSource(['a' => 'One']);
+        file_put_contents($this->dir.'pages/other.en.yml', Yaml::dump(['b' => 'Two']));
+
+        // The German run happens while the French one is between two files.
+        $german = $this->createService($this->createEngine('fake'));
+        $engine = new class($german) implements TextTranslatorInterface {
+            private bool $interleaved = false;
+
+            public function __construct(
+                private readonly TranslationFileService $german,
+            ) {
+            }
+
+            public function translate(
+                array $texts,
+                string $sourceLocale,
+                string $targetLocale
+            ): array {
+                if (! $this->interleaved) {
+                    $this->interleaved = true;
+                    $this->german->translateFiles('en', 'de');
+                }
+
+                return array_map(static fn (string $text): string => 'FR('.$text.')', $texts);
+            }
+
+            public function getEngineName(): string
+            {
+                return 'fake';
+            }
+        };
+
+        $this->createService($engine)->translateFiles('en', 'fr');
+
+        $this->assertEqualsCanonicalizing(
+            ['pages/index.de.yml', 'pages/other.de.yml', 'pages/index.fr.yml', 'pages/other.fr.yml'],
+            array_keys($this->readLock())
+        );
+    }
+
     private function createFailingEngine(): TextTranslatorInterface
     {
         return new class implements TextTranslatorInterface {

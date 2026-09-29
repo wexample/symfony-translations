@@ -112,7 +112,7 @@ class TranslationFileService
                     $lock[$targetKey] = $fileLock;
 
                     if (! $dryRun) {
-                        $this->writeLock($lockPath, $lock);
+                        $this->updateLock($lockPath, $targetKey, $fileLock);
                     }
                 }
 
@@ -148,7 +148,7 @@ class TranslationFileService
                         unlink($targetPath);
                     }
 
-                    $this->writeLock($lockPath, $lock);
+                    $this->updateLock($lockPath, $targetKey, null);
                 }
 
                 if ($onOrphan) {
@@ -160,15 +160,37 @@ class TranslationFileService
         return $stats;
     }
 
-    private function writeLock(
+    /**
+     * Changes the entry of one target file, re-reading the lock under an
+     * exclusive lock first: runs for other locales may be writing the same
+     * file at the same time, and must not erase each other's entries.
+     *
+     * @param array<string, array{hash: string, engine: string}>|null $fileLock Null removes the entry
+     */
+    private function updateLock(
         string $lockPath,
-        array $lock
+        string $targetKey,
+        ?array $fileLock
     ): void {
+        $handle = fopen($lockPath, 'c+');
+        flock($handle, LOCK_EX);
+
+        $content = stream_get_contents($handle);
+        $lock = '' === $content ? [] : json_decode($content, true, flags: JSON_THROW_ON_ERROR);
+
+        if (null === $fileLock) {
+            unset($lock[$targetKey]);
+        } else {
+            $lock[$targetKey] = $fileLock;
+        }
+
         ksort($lock);
-        file_put_contents(
-            $lockPath,
-            json_encode($lock, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n"
-        );
+        ftruncate($handle, 0);
+        rewind($handle);
+        fwrite($handle, json_encode($lock, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n");
+        fflush($handle);
+        flock($handle, LOCK_UN);
+        fclose($handle);
     }
 
     /**
