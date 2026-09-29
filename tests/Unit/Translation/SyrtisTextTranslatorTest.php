@@ -33,7 +33,10 @@ class SyrtisTextTranslatorTest extends TestCase
 
         [$config, $texts] = $this->getSentMessages(0);
         $this->assertSame('LANG_CONFIG', $config['name']);
-        $this->assertSame(['source' => 'fr', 'target' => 'en_GB'], json_decode($config['content'], true));
+        $this->assertSame(
+            ['source' => 'fr', 'target' => 'en_GB', 'source_name' => 'French', 'target_name' => 'English (United Kingdom)'],
+            json_decode($config['content'], true)
+        );
         $this->assertSame(['translate'], $texts['stamps']);
         $this->assertSame(
             ['title' => 'Bonjour [#0]', '3' => 'Votre commande est prête.'],

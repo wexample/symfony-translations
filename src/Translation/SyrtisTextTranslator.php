@@ -13,8 +13,10 @@ use Wexample\SymfonyTranslations\Interface\TextTranslatorInterface;
  * Translates through a session on a Syrtis translation scenario, a batch of
  * texts per request. The scenario receives, stamped `translate`:
  *
- * - a `LANG_CONFIG` message, `{"source": "fr", "target": "en_GB"}`: Symfony
- *   locale identifiers, as they are, never converted;
+ * - a `LANG_CONFIG` message, `{"source": "fr", "target": "en_GB", "source_name":
+ *   "French", "target_name": "English (United Kingdom)"}`: the Symfony locale
+ *   identifiers as they are, and their English names from the ICU data — what
+ *   a prompt says to the model, with no table of languages to keep there;
  * - a conversation message holding the batch, a JSON object of texts by key.
  *
  * It answers with a conversation message holding a JSON object of the
@@ -132,7 +134,12 @@ class SyrtisTextTranslator implements TextTranslatorInterface
             $this->sessionSecureId,
             messages: [
                 [
-                    'content' => json_encode(['source' => $sourceLocale, 'target' => $targetLocale], JSON_THROW_ON_ERROR),
+                    'content' => json_encode([
+                        'source' => $sourceLocale,
+                        'target' => $targetLocale,
+                        'source_name' => \Locale::getDisplayName($sourceLocale, 'en'),
+                        'target_name' => \Locale::getDisplayName($targetLocale, 'en'),
+                    ], JSON_THROW_ON_ERROR),
                     'contentType' => Message::CONTENT_TYPE_DEFAULT,
                     'format' => Message::FORMAT_JSON,
                     'name' => self::MESSAGE_NAME_LANG_CONFIG,

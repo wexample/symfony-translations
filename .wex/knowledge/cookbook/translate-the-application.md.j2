@@ -100,7 +100,7 @@ wexample_symfony_translations:
 
 Translations are then made by a Syrtis scenario and recorded under the engine name `syrtis`. Texts go by batch — a whole file, cut when its texts exceed `max_batch_length` characters, as the model answers a batch in one go. Each request sends to the session two messages stamped `translate`:
 
-- `LANG_CONFIG`, JSON: `{"source": "fr", "target": "en_GB"}`. Locales are Symfony's identifiers, as they are: the scenario follows them, nothing converts them.
+- `LANG_CONFIG`, JSON: `{"source": "fr", "target": "en_GB", "source_name": "French", "target_name": "English (United Kingdom)"}`. Locales are Symfony's identifiers, as they are; the names come from the ICU data, in English, for the prompt to say to the model. The scenario keeps no table of languages: any locale ICU knows can be asked for.
 - a conversation message, JSON: the texts by key, `{"page.title": "Bienvenue [#0]", "7": "Payer"}`.
 
 The scenario answers with a conversation message holding a JSON object of the translations under the same keys, leaving the `[#n]` placeholders untouched. Keys it leaves out are asked once more on their own; those still missing stay untranslated — read in the fallback locale, reported by the command — and are asked again on the next run. A reply that is not a JSON object stops the command.
