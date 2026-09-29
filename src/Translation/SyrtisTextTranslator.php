@@ -27,9 +27,10 @@ use Wexample\SymfonyTranslations\Interface\TextTranslatorInterface;
  * Batches are cut to fit `max_batch_length` characters of texts, so that the
  * model's answer stays within its output.
  *
- * A model now and then skips a key of a long batch. The keys left out are asked
- * once more, on their own; those still missing are left out of the result, for
- * the caller to ask again later rather than lose the whole batch.
+ * A model now and then skips a key of a long batch, or answers plain text. The
+ * keys left out are asked once more, on their own; those still missing are left
+ * out of the result, for the caller to ask again later rather than lose the
+ * whole batch. A single text answered as plain text is taken as its translation.
  */
 class SyrtisTextTranslator implements TextTranslatorInterface
 {
@@ -165,9 +166,10 @@ class SyrtisTextTranslator implements TextTranslatorInterface
         $decoded = json_decode($content, true);
 
         if (! is_array($decoded)) {
-            throw new TranslationReplyException(
-                'The translation scenario did not answer a JSON object: '.mb_substr($content, 0, 200)
-            );
+            // A model asked for one text now and then answers the translated
+            // text alone, without its JSON wrapper. Of several, nothing can be
+            // told apart: all are left out, to be asked again.
+            return 1 === count($batch) ? [array_key_first($batch) => $content] : [];
         }
 
         $translations = [];

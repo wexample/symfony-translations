@@ -9,7 +9,6 @@ use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use SyrtisClient\Common\SyrtisClient;
-use Wexample\SymfonyTranslations\Exception\TranslationReplyException;
 use Wexample\SymfonyTranslations\Translation\SyrtisTextTranslator;
 
 class SyrtisTextTranslatorTest extends TestCase
@@ -104,13 +103,25 @@ class SyrtisTextTranslatorTest extends TestCase
         $this->assertCount(2, $this->history);
     }
 
-    public function testRefusesAReplyThatIsNotJson(): void
+    public function testTakesThePlainTextAnswerToASingleText(): void
     {
-        $translator = $this->createTranslator([$this->reply('Sorry, I cannot help with that.')]);
+        $translator = $this->createTranslator([$this->reply('Cette page liste les routes.')]);
 
-        $this->expectException(TranslationReplyException::class);
+        $this->assertSame(
+            ['intro' => 'Cette page liste les routes.'],
+            $translator->translate(['intro' => 'This page lists the routes.'], 'en', 'fr')
+        );
+    }
 
-        $translator->translate(['a' => 'a'], 'fr', 'en');
+    public function testLeavesOutABatchAnsweredInPlainText(): void
+    {
+        $translator = $this->createTranslator([
+            $this->reply('Deux phrases mêlées.'),
+            $this->reply(['a' => 'A', 'b' => 'B']),
+        ]);
+
+        // Asked once more, on their own: the second answer is kept.
+        $this->assertSame(['a' => 'A', 'b' => 'B'], $translator->translate(['a' => 'a', 'b' => 'b'], 'fr', 'en'));
     }
 
     /**
