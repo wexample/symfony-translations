@@ -21,7 +21,7 @@ use Wexample\SymfonyTranslations\Translation\Translator;
  */
 class TranslateContentCommand extends AbstractTranslationCommand
 {
-    protected static $defaultDescription = 'Translate the #[Translatable] fields of stored entities into a locale';
+    protected static $defaultDescription = 'Translate the #[Translatable] fields of stored entities into one or several locales';
 
     public function __construct(
         Translator $translator,
@@ -38,8 +38,8 @@ class TranslateContentCommand extends AbstractTranslationCommand
         parent::configure();
 
         $this
-            ->addArgument('to', InputArgument::REQUIRED, 'The locale to translate into')
-            ->addArgument('entity', InputArgument::OPTIONAL, 'The entity class, every class having #[Translatable] fields if omitted')
+            ->addArgument('to', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'The locales to translate into')
+            ->addOption('entity', null, InputOption::VALUE_REQUIRED, 'The entity class, every class having #[Translatable] fields if omitted')
             ->addOption('force', null, InputOption::VALUE_NONE, 'Translate again what an engine already translated; values written by hand are kept')
             ->addOption('batch-size', null, InputOption::VALUE_REQUIRED, 'Entities loaded at once', '50');
     }
@@ -49,14 +49,15 @@ class TranslateContentCommand extends AbstractTranslationCommand
         OutputInterface $output
     ): int {
         $io = new SymfonyStyle($input, $output);
-        $to = $input->getArgument('to');
+        $locales = array_values(array_unique($input->getArgument('to')));
         $force = (bool) $input->getOption('force');
         $batchSize = max(1, (int) $input->getOption('batch-size'));
         $translatableClasses = $this->contentTranslationService->getTranslatableClasses();
-        $classes = $input->getArgument('entity') ? [$input->getArgument('entity')] : $translatableClasses;
+        $classes = $input->getOption('entity') ? [$input->getOption('entity')] : $translatableClasses;
+        $sourceLocale = $this->contentTranslationService->getSourceLocale();
 
-        if ($to === $this->contentTranslationService->getSourceLocale()) {
-            $io->error('Content is written in "'.$to.'" already.');
+        if (in_array($sourceLocale, $locales, true)) {
+            $io->error('Content is written in "'.$sourceLocale.'" already.');
 
             return Command::FAILURE;
         }
@@ -73,33 +74,35 @@ class TranslateContentCommand extends AbstractTranslationCommand
             $io->warning('No translation engine is configured yet: texts are stored untranslated, and will be translated on the first run with a real engine.');
         }
 
-        foreach ($classes as $class) {
-            $io->section($class.' → '.$to);
+        foreach ($locales as $to) {
+            foreach ($classes as $class) {
+                $io->section($class.' → '.$to);
 
-            $query = $this->entityManager->createQueryBuilder()
-                ->select('e')
-                ->from($class, 'e')
-                ->getQuery();
+                $query = $this->entityManager->createQueryBuilder()
+                    ->select('e')
+                    ->from($class, 'e')
+                    ->getQuery();
 
-            $count = 0;
-            $progress = $io->createProgressBar();
+                $count = 0;
+                $progress = $io->createProgressBar();
 
-            foreach ($query->toIterable() as $entity) {
-                $this->contentTranslationService->translateEntity($entity, $to, $force);
-                $progress->advance();
+                foreach ($query->toIterable() as $entity) {
+                    $this->contentTranslationService->translateEntity($entity, $to, $force);
+                    $progress->advance();
 
-                if (0 === ++$count % $batchSize) {
-                    $this->entityManager->clear();
+                    if (0 === ++$count % $batchSize) {
+                        $this->entityManager->clear();
+                    }
                 }
+
+                $progress->finish();
+                $this->entityManager->clear();
+                $io->newLine(2);
+                $io->writeln(sprintf(' %d entities, fields: %s', $count, implode(', ', $this->contentTranslationService->getTranslatableFields($class))));
             }
 
-            $progress->finish();
-            $this->entityManager->clear();
-            $io->newLine(2);
-            $io->writeln(sprintf(' %d entities, fields: %s', $count, implode(', ', $this->contentTranslationService->getTranslatableFields($class))));
+            $io->success('Content translated into "'.$to.'".');
         }
-
-        $io->success('Content translated into "'.$to.'".');
 
         return Command::SUCCESS;
     }

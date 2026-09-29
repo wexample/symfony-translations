@@ -59,8 +59,8 @@ A field is translated the first time it is read in a language — synchronously,
 To translate ahead of the readers:
 
 ```bash
-php bin/console translations:translate-content fr                        # every class with #[Translatable] fields
-php bin/console translations:translate-content fr 'App\Entity\Article'   # one class
+php bin/console translations:translate-content fr es de                  # every class with #[Translatable] fields, into each locale
+php bin/console translations:translate-content fr --entity='App\Entity\Article'   # one class
 php bin/console translations:translate-content fr --force                # redo what an engine made
 ```
 

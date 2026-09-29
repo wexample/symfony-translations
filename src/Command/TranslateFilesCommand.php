@@ -18,12 +18,12 @@ use Wexample\SymfonyTranslations\Translation\Translator;
 
 /**
  * Translates the interface: every `.<from>.yml` of the application gets its
- * `.<to>.yml`, and the target locale is enabled. The bundles' files only when
+ * `.<to>.yml` for each target locale, and the target locales are enabled. The bundles' files only when
  * asked for, as they belong to their packages.
  */
 class TranslateFilesCommand extends AbstractTranslationCommand
 {
-    protected static $defaultDescription = 'Translate every interface translation file into a locale, and enable it';
+    protected static $defaultDescription = 'Translate every interface translation file into one or several locales, and enable them';
 
     public function __construct(
         Translator $translator,
@@ -41,7 +41,7 @@ class TranslateFilesCommand extends AbstractTranslationCommand
         parent::configure();
 
         $this
-            ->addArgument('to', InputArgument::REQUIRED, 'The locale to translate into')
+            ->addArgument('to', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'The locales to translate into')
             ->addOption('from', null, InputOption::VALUE_REQUIRED, 'The locale to translate from, the default locale if omitted')
             ->addOption('path', null, InputOption::VALUE_REQUIRED, 'Only the files whose path contains this string')
             ->addOption('include-bundles', null, InputOption::VALUE_NONE, 'Also write into the translation directories of the bundles, which belong to their packages')
@@ -55,12 +55,12 @@ class TranslateFilesCommand extends AbstractTranslationCommand
         OutputInterface $output
     ): int {
         $io = new SymfonyStyle($input, $output);
-        $to = $input->getArgument('to');
+        $locales = array_values(array_unique($input->getArgument('to')));
         $from = $input->getOption('from') ?? $this->localeService->getDefaultLocale();
         $dryRun = (bool) $input->getOption('dry-run');
 
-        if ($from === $to) {
-            $io->error('The source and target locales are the same: '.$to);
+        if (in_array($from, $locales, true)) {
+            $io->error('The source locale is among the target ones: '.$from);
 
             return Command::FAILURE;
         }
@@ -69,6 +69,20 @@ class TranslateFilesCommand extends AbstractTranslationCommand
             $io->warning('No translation engine is configured yet: texts are copied untranslated, and will be translated on the first run with a real engine.');
         }
 
+        foreach ($locales as $to) {
+            $this->translateLocale($io, $input, $from, $to, $dryRun);
+        }
+
+        return Command::SUCCESS;
+    }
+
+    private function translateLocale(
+        SymfonyStyle $io,
+        InputInterface $input,
+        string $from,
+        string $to,
+        bool $dryRun
+    ): void {
         $io->title(sprintf('Translating interface files from "%s" to "%s"', $from, $to));
 
         $stats = $this->translationFileService->translateFiles(
@@ -92,7 +106,8 @@ class TranslateFilesCommand extends AbstractTranslationCommand
         }
 
         $io->success(sprintf(
-            '%d source files, %d target files %s, %d texts translated, %d orphan files %s.',
+            '%s: %d source files, %d target files %s, %d texts translated, %d orphan files %s.',
+            $to,
             $stats['files'],
             $stats['written'],
             $dryRun ? 'to write' : 'written',
@@ -100,7 +115,5 @@ class TranslateFilesCommand extends AbstractTranslationCommand
             $stats['removed'],
             $dryRun ? 'to remove' : 'removed'
         ));
-
-        return Command::SUCCESS;
     }
 }

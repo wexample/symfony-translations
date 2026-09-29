@@ -122,8 +122,8 @@ The commands in {{ path("src/Command") }} all extend `AbstractTranslationCommand
 - `translations:locales` lists `getAllLocales()`;
 - `translations:catalogue` tables `getCatalogue($locale)->all()` with an optional `--domain` filter;
 - `translations:trans` translates one key with JSON-encoded `--parameters`;
-- `translations:translate-files` runs `TranslationFileService`, then enables the locale;
-- `translations:translate-content` runs `ContentTranslationService` over every entity of one class, or of every class having marked fields, clearing the entity manager between batches.
+- `translations:translate-files` runs `TranslationFileService` for each target locale, then enables it;
+- `translations:translate-content` runs `ContentTranslationService`, for each target locale, over every entity of one class, or of every class having marked fields, clearing the entity manager between batches.
 
 ### Tests
 
