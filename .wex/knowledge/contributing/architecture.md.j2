@@ -84,7 +84,7 @@ The fallback is done here because Symfony's own cannot: its fallback catalogues 
 
 ### One way to the engine
 
-{{ path("src/Interface/TextTranslatorInterface.php") }} takes a batch of texts and returns it under the same keys, and names its engine. {{ path("src/Service/PendingTextTranslator.php") }} is the default: it returns the texts untouched, its engine name is `pending`, and it carries the `TODO` where `wexample/symfony-syrtis` plugs in.
+{{ path("src/Interface/TextTranslatorInterface.php") }} takes a batch of texts and returns it under the same keys, and names its engine. {{ path("src/Service/PendingTextTranslator.php") }} is the default: it returns the texts untouched, its engine name is `pending`. An engine replaces it by aliasing the interface: `syrtis/symfony-engine` does, through a compiler pass, so that the bundles' order does not matter.
 
 Nothing calls the engine directly. {{ path("src/Service/TextTranslationService.php") }} skips texts with no letter in them, masks parameters and markup with `[#n]` tokens through {{ path("src/Helper/TranslationPlaceholderHelper.php") }} and restores them afterwards. Its `hashSource()` is what every stored translation is checked against.
 

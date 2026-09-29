@@ -20,8 +20,8 @@ class PendingTextTranslator implements TextTranslatorInterface
         string $sourceLocale,
         string $targetLocale
     ): array {
-        // TODO: delegate to wexample/symfony-syrtis, which turns the batch of
-        //       $texts from $sourceLocale into $targetLocale, keeping the keys.
+        // A real engine replaces this one by aliasing the interface: syrtis/symfony-engine
+        // does it when its translation is enabled.
         return $texts;
     }
 

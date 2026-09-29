@@ -35,8 +35,8 @@ services:
         arguments:
             $urlMatcher: '@router'
 
-    # The engine turning texts into another language, replaced by the one
-    # wexample/symfony-syrtis will provide.
+    # The engine turning texts into another language, until one is plugged,
+    # e.g. by syrtis/symfony-engine.
     Wexample\SymfonyTranslations\Interface\TextTranslatorInterface:
         alias: Wexample\SymfonyTranslations\Service\PendingTextTranslator
 
