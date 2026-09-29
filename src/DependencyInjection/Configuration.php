@@ -28,6 +28,11 @@ class Configuration implements ConfigurationInterface
      */
     final public const int DEFAULT_SYRTIS_MAX_BATCH_LENGTH = 6000;
 
+    /** Seconds a translation request may take: a batch is answered in one model call. */
+    final public const int DEFAULT_SYRTIS_TIMEOUT = 180;
+
+    final public const int DEFAULT_SYRTIS_CONNECT_TIMEOUT = 10;
+
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('wexample_symfony_translations');
@@ -72,6 +77,15 @@ class Configuration implements ConfigurationInterface
                         ->end()
                         ->integerNode('max_batch_length')
                             ->defaultValue(self::DEFAULT_SYRTIS_MAX_BATCH_LENGTH)
+                            ->min(1)
+                        ->end()
+                        // A request left unanswered fails after it instead of holding the run forever.
+                        ->integerNode('timeout')
+                            ->defaultValue(self::DEFAULT_SYRTIS_TIMEOUT)
+                            ->min(1)
+                        ->end()
+                        ->integerNode('connect_timeout')
+                            ->defaultValue(self::DEFAULT_SYRTIS_CONNECT_TIMEOUT)
                             ->min(1)
                         ->end()
                     ->end()

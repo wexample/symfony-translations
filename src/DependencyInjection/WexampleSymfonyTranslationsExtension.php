@@ -2,6 +2,7 @@
 
 namespace Wexample\SymfonyTranslations\DependencyInjection;
 
+use GuzzleHttp\Client as GuzzleClient;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use SyrtisClient\Common\SyrtisClient;
@@ -59,6 +60,14 @@ class WexampleSymfonyTranslationsExtension extends AbstractWexampleSymfonyExtens
                 '$client' => (new Definition(SyrtisClient::class))->setArguments([
                     '$host' => $config['host'],
                     '$apiKey' => $config['api_key'],
+                    // The Syrtis client waits indefinitely by default, and gives no
+                    // way to say otherwise: its http client is given ready-made,
+                    // with the base uri the Syrtis client would have given its own.
+                    '$httpClient' => new Definition(GuzzleClient::class, [[
+                        'base_uri' => rtrim($config['host'], '/').'/api/'.SyrtisClient::API_VERSION_DEFAULT.'/',
+                        'timeout' => $config['timeout'],
+                        'connect_timeout' => $config['connect_timeout'],
+                    ]]),
                 ]),
                 '$sessionSecureId' => $config['session_secure_id'],
                 '$maxBatchLength' => $config['max_batch_length'],

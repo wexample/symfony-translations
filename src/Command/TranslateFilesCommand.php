@@ -32,6 +32,7 @@ class TranslateFilesCommand extends AbstractTranslationCommand
         private readonly TextTranslationService $textTranslationService,
         private readonly LocaleConfigService $localeConfigService,
         private readonly LocaleService $localeService,
+        private readonly string $projectDir,
     ) {
         parent::__construct($translator, $bundleService);
     }
@@ -70,7 +71,18 @@ class TranslateFilesCommand extends AbstractTranslationCommand
         }
 
         foreach ($locales as $to) {
+            // Two runs on one locale would pay the engine twice for the same
+            // texts and write the same files: the second leaves it to the first.
+            $runLock = fopen(sys_get_temp_dir().'/translate-files-'.md5($this->projectDir).'-'.$to.'.lock', 'c');
+
+            if (! flock($runLock, LOCK_EX | LOCK_NB)) {
+                $io->warning(sprintf('Another run is translating "%s" in this application: skipped.', $to));
+                fclose($runLock);
+                continue;
+            }
+
             $this->translateLocale($io, $input, $from, $to, $dryRun);
+            fclose($runLock);
         }
 
         return Command::SUCCESS;
