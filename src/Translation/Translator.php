@@ -166,6 +166,14 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     }
 
     /**
+     * Every directory translation files are read from, keyed like translations_paths.
+     */
+    public function getTranslationPaths(): array
+    {
+        return $this->translationPaths;
+    }
+
+    /**
      * Load translation files for all locales
      */
     private function loadTranslationFiles(): void
@@ -441,15 +449,18 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         }
 
         $keyDomain = $this->resolveDomain($keyDomain);
-        $catalogue = $this->translator->getCatalogue();
-        $messages = $catalogue->all();
         $filtered = [];
 
         $regex = $this->buildRegexForFilterKey(YamlIncludeResolver::splitKey($key));
 
-        foreach (($messages[$keyDomain] ?? []) as $id => $translation) {
-            if (preg_match($regex, $id)) {
-                $filtered[$keyDomain . self::DOMAIN_SEPARATOR . $id] = $translation;
+        // Fallbacks first, so the locale asked for overwrites what it translates.
+        foreach (array_reverse($this->getLocaleChain($this->getLocale())) as $locale) {
+            $this->ensureCataloguePopulated($locale);
+
+            foreach ($this->translator->getCatalogue($locale)->all($keyDomain) as $id => $translation) {
+                if (preg_match($regex, $id)) {
+                    $filtered[$keyDomain . self::DOMAIN_SEPARATOR . $id] = $translation;
+                }
             }
         }
 
@@ -529,6 +540,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         ?string $locale = null,
         bool $forceTranslate = false
     ): string {
+        $locale ??= $this->getLocale();
         $this->ensureCataloguePopulated($locale);
 
         $default = $id;
@@ -543,10 +555,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             }
         }
 
-        // Check if the translation exists in the catalogue or if we're forcing translation
-        $catalogue = $this->translator->getCatalogue();
-        // Return the translation if it exists, otherwise return the default value
-        if ($forceTranslate || ($domain && $catalogue->has($id, $domain))) {
+        if ($forceTranslate) {
             return $this->translator->trans(
                 $id,
                 $parameters,
@@ -555,7 +564,50 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
             );
         }
 
+        // Return the translation if it exists, otherwise return the default value
+        if ($domain && null !== $definingLocale = $this->findLocaleDefining($id, $domain, $locale)) {
+            return $this->translator->trans(
+                $id,
+                $parameters,
+                $domain,
+                $definingLocale
+            );
+        }
+
         return $default;
+    }
+
+    /**
+     * The first of the locale and its fallbacks whose own catalogue holds the
+     * key: a page in a language translated in part shows the rest in the
+     * fallback one rather than raw keys. Symfony's fallback catalogues are
+     * copies taken before the yml messages are added, so they cannot do it.
+     */
+    private function findLocaleDefining(
+        string $id,
+        string $domain,
+        string $locale
+    ): ?string {
+        foreach ($this->getLocaleChain($locale) as $candidate) {
+            $this->ensureCataloguePopulated($candidate);
+
+            if ($this->translator->getCatalogue($candidate)->defines($id, $domain)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return string[] The locale, then its fallbacks
+     */
+    private function getLocaleChain(string $locale): array
+    {
+        return array_values(array_unique([
+            $locale,
+            ...$this->translator->getFallbackLocales(),
+        ]));
     }
 
     private function ensureCataloguePopulated(?string $locale = null): void

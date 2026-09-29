@@ -350,7 +350,7 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
  *         enabled?: bool, // Default: false
  *     },
  *     serializer?: bool|array{ // Serializer configuration
- *         enabled?: bool, // Default: false
+ *         enabled?: bool, // Default: true
  *         enable_attributes?: bool, // Default: true
  *         name_converter?: scalar|null,
  *         circular_reference_handler?: scalar|null,
@@ -643,7 +643,7 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
  *         }>,
  *     },
  *     uid?: bool|array{ // Uid configuration
- *         enabled?: bool, // Default: false
+ *         enabled?: bool, // Default: true
  *         default_uuid_version?: 7|6|4|1, // Default: 7
  *         name_based_uuid_version?: 5|3, // Default: 5
  *         name_based_uuid_namespace?: scalar|null,
@@ -952,6 +952,10 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
  * }
  * @psalm-type WexampleSymfonyTranslationsConfig = array{
  *     translations_paths?: list<scalar|null>,
+ *     locale_routing?: bool|array{
+ *         enabled?: bool, // Default: false
+ *         excluded_paths?: list<scalar|null>,
+ *     },
  * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,

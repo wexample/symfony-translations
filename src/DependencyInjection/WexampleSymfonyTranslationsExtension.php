@@ -17,10 +17,19 @@ class WexampleSymfonyTranslationsExtension extends AbstractWexampleSymfonyExtens
         );
 
         $configuration = new Configuration();
-        $paths = $this->processConfiguration($configuration, $configs);
+        $config = $this->processConfiguration($configuration, $configs);
         $existing = $container->hasParameter('translations_paths')
             ? (array) $container->getParameter('translations_paths')
             : [];
-        $container->setParameter('translations_paths', array_merge($existing, $paths['translations_paths']));
+        $container->setParameter('translations_paths', array_merge($existing, $config['translations_paths']));
+
+        $container->setParameter(
+            'wexample_symfony_translations.locale_routing.enabled',
+            $config['locale_routing']['enabled']
+        );
+        $container->setParameter(
+            'wexample_symfony_translations.locale_routing.excluded_paths',
+            $config['locale_routing']['excluded_paths']
+        );
     }
 }

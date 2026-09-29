@@ -1,0 +1,72 @@
+## Serve the application in several languages
+
+Three steps: put every page under its language, translate the interface files, translate the stored content. Each step works without a translation engine — texts are then copied as they are and marked `pending`, and the first run with a real engine replaces them without being forced.
+
+### 1. Put every page url under its language
+
+```yaml
+# config/packages/wexample_symfony_translations.yaml
+wexample_symfony_translations:
+    locale_routing: true
+```
+
+Every route becomes `/{_locale}/…`, whichever bundle declared it, and `/` redirects to the home page of the visitor's language. Paths reached by a program keep their url: anything opening on `/_`, `/api`, `/js/routing`, `favicon.ico` and `robots.txt`. They are answered in the language last chosen on a page — a `_locale` cookie — or else in the one the browser asks for. The list is `locale_routing.excluded_paths`, a set of regular expressions.
+
+The languages are `framework.enabled_locales`, the default locale first. An url typed without its language is redirected to the same page in the visitor's.
+
+Two things in the application may still assume urls without a language:
+
+- `access_control` patterns in `security.yaml`: `^/login/2fa` becomes `'^/[a-z]{2}/login/2fa'` — quoted, as `{2}` would otherwise be read as YAML.
+- Urls written by hand in javascript. Routes generated through the loader's `RoutingService` take the page's language on their own.
+
+### 2. Translate the interface
+
+```bash
+php bin/console translations:translate-files fr
+```
+
+Writes a `.fr.yml` next to every `.en.yml` of the application, then adds `fr` to `framework.enabled_locales` in `config/packages/translation.yaml`. Only the application's own files: the bundles' belong to their packages. `--include-bundles` writes into them as well, which is what a developer working on the bundles through symlinks wants.
+
+A key is translated when the target file lacks it, or when its source changed since. A wording already in the target file without a trace in the `.translations.lock.json` beside it was written by hand, and is never overwritten. References (`@page::title`), the `%` wildcard and `~extends` are copied as they are; parameters (`%name%`, `{count}`) and markup never reach the engine.
+
+| Option | |
+|---|---|
+| `--dry-run` | Report what would be written, write nothing |
+| `--path=<text>` | Only the source files whose path contains it |
+| `--from=<locale>` | Translate from another locale than the default one |
+| `--force` | Translate again what an engine translated; hand-written wording is kept |
+
+A key missing in a language is read in the fallback one, so a page translated in part shows the rest in the default language rather than raw keys.
+
+### 3. Translate the content
+
+Mark the fields in the entities — see [translatable entities](translatable-entities) — then translate what is already stored:
+
+```bash
+php bin/console translations:translate-content fr
+php bin/console translations:translate-content fr 'App\Entity\Article'
+```
+
+Without it nothing is lost: a field is translated the first time it is read in a language, and stored. The command only spares the first readers the wait.
+
+### Let the reader switch
+
+`wexample/symfony-translations-ds` ships the switcher, a menu of every enabled language, each leading to the same page in it:
+
+```twig
+{{ component(render_pass, '@WexampleSymfonyTranslationsDsBundle/components/locale-switcher') }}
+```
+
+Without it, `locales()` returns the same list — `code`, `name` as the language names itself, `url` of the current page in it, `current`.
+
+### Plug a translation engine
+
+Every text goes through `Wexample\SymfonyTranslations\Interface\TextTranslatorInterface`, which receives a batch and returns it under the same keys. The default implementation, `PendingTextTranslator`, returns the texts untouched. An engine is plugged by aliasing the interface to its own service:
+
+```yaml
+services:
+    Wexample\SymfonyTranslations\Interface\TextTranslatorInterface:
+        alias: App\Translation\MyTextTranslator
+```
+
+Its `getEngineName()` is stored next to each translation; what the pending one produced is redone on the next run of either command, and on the next read of a field.

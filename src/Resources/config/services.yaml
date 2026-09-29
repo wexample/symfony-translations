@@ -5,7 +5,11 @@ services:
         public: false
 
     Wexample\SymfonyTranslations\:
-        resource: '../../{Command,Service,Twig}'
+        resource: '../../{Command,EventSubscriber,Repository,Serializer,Service,Twig}'
+        tags: ['controller.service_arguments']
+
+    Wexample\SymfonyTranslations\Controller\:
+        resource: '../../Controller/'
         tags: ['controller.service_arguments']
 
     # Override translation service.
@@ -14,3 +18,37 @@ services:
       arguments:
         - '@translator.default'
       public: false
+
+    Wexample\SymfonyTranslations\Service\LocaleService:
+        arguments:
+            $defaultLocale: '%kernel.default_locale%'
+            $enabledLocales: '%kernel.enabled_locales%'
+            $routingEnabled: '%wexample_symfony_translations.locale_routing.enabled%'
+            $excludedPaths: '%wexample_symfony_translations.locale_routing.excluded_paths%'
+
+    Wexample\SymfonyTranslations\Routing\LocalizedRouteLoader:
+        decorates: routing.loader
+        arguments:
+            $inner: '@.inner'
+
+    Wexample\SymfonyTranslations\EventSubscriber\LocaleSubscriber:
+        arguments:
+            $urlMatcher: '@router'
+
+    # The engine turning texts into another language, replaced by the one
+    # wexample/symfony-syrtis will provide.
+    Wexample\SymfonyTranslations\Interface\TextTranslatorInterface:
+        alias: Wexample\SymfonyTranslations\Service\PendingTextTranslator
+
+    Wexample\SymfonyTranslations\Service\LocaleConfigService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    Wexample\SymfonyTranslations\Service\TranslationFileService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    # Above the per-entity normalizers, so that it wraps them rather than being skipped.
+    Wexample\SymfonyTranslations\Serializer\ContentTranslationNormalizer:
+        tags:
+            - { name: serializer.normalizer, priority: 64 }
