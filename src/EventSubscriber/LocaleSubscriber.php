@@ -51,7 +51,8 @@ final class LocaleSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $request->setLocale($this->localeService->guessLocale($request));
+        // An api answer may be in a language content is read in without an interface of its own.
+        $request->setLocale($this->localeService->guessLocale($request, true));
     }
 
     public function onKernelResponse(ResponseEvent $event): void

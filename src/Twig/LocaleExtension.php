@@ -27,6 +27,13 @@ class LocaleExtension extends AbstractExtension
                     'locales',
                 ]
             ),
+            new TwigFunction(
+                'locale_direction',
+                [
+                    $this->localeService,
+                    'getDirection',
+                ]
+            ),
         ];
     }
 
@@ -34,7 +41,7 @@ class LocaleExtension extends AbstractExtension
      * Every locale the application speaks, each with the url of the current
      * page in that language.
      *
-     * @return array<int, array{code: string, name: string, url: ?string, current: bool}>
+     * @return array<int, array{code: string, name: string, dir: string, url: ?string, current: bool}>
      */
     public function locales(): array
     {
@@ -46,6 +53,8 @@ class LocaleExtension extends AbstractExtension
             $locales[] = [
                 'code' => $locale,
                 'name' => $this->localeService->getLocaleName($locale),
+                // Each name is written its own way, whatever the page's direction.
+                'dir' => $this->localeService->getDirection($locale),
                 'url' => $request ? $this->buildLocaleUrl($locale) : null,
                 'current' => $locale === $currentLocale,
             ];

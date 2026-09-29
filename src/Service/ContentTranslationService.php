@@ -98,7 +98,9 @@ class ContentTranslationService
             $sources[$field] = $metadata->getFieldValue($entity, $field);
         }
 
-        if ($locale === $this->getSourceLocale()) {
+        // Nothing is sent to the engine for a language the application does not
+        // read content in, whatever a request or a template asks for.
+        if ($locale === $this->getSourceLocale() || ! $this->localeService->hasContentLocale($locale)) {
             return $this->resolved[$cacheKey] = $sources;
         }
 

@@ -28,6 +28,10 @@ class WexampleSymfonyTranslationsExtension extends AbstractWexampleSymfonyExtens
         $container->setParameter('translations_paths', array_merge($existing, $config['translations_paths']));
 
         $container->setParameter(
+            'wexample_symfony_translations.content_locales',
+            $config['content_locales']
+        );
+        $container->setParameter(
             'wexample_symfony_translations.locale_routing.enabled',
             $config['locale_routing']['enabled']
         );

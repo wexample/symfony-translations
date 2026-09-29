@@ -12,7 +12,9 @@ wexample_symfony_translations:
 
 Every route becomes `/{_locale}/…`, whichever bundle declared it, and `/` redirects to the home page of the visitor's language. Paths reached by a program keep their url: anything opening on `/_`, `/api`, `/js/routing`, `favicon.ico` and `robots.txt`. They are answered in the language last chosen on a page — a `_locale` cookie — or else in the one the browser asks for. The list is `locale_routing.excluded_paths`, a set of regular expressions.
 
-The languages are `framework.enabled_locales`, the default locale first. An url typed without its language is redirected to the same page in the visitor's.
+The languages are `framework.enabled_locales`, the default locale first. An url typed without its language is redirected to the same page in the visitor's. Adding one rebuilds the cached routes on its own: no cache to clear.
+
+Every page carries its language and its writing direction on `<html>` — `lang="ar" dir="rtl"`, `lang="en-GB" dir="ltr"` — whichever layout drew it. The direction comes from the ICU locale data, not from a list kept by the bundle; `locale_direction('ar')` gives it in Twig, and each entry of `locales()` carries its own.
 
 Two things in the application may still assume urls without a language:
 
@@ -46,11 +48,21 @@ A key missing in a language is read in the fallback one, so a page translated in
 Mark the fields in the entities — see [translatable entities](translatable-entities) — then translate what is already stored:
 
 ```bash
+php bin/console translations:translate-content                                  # every content locale
 php bin/console translations:translate-content fr
 php bin/console translations:translate-content fr --entity='App\Entity\Article'
 ```
 
 Without it nothing is lost: a field is translated the first time it is read in a language, and stored. The command only spares the first readers the wait.
+
+Content may be read in more languages than the interface has — through the api, or `translated(article, 'it')` — as it costs no file, only rows made on demand. Those are listed apart:
+
+```yaml
+wexample_symfony_translations:
+    content_locales: [it, nl, pl, tr, vi]
+```
+
+The content locales are the interface ones plus these. An api request is answered in the one its `Accept-Language` asks for among them; its interface wording then falls back to the default language. Nothing is ever sent to the engine for a language outside the list, whatever a request asks for.
 
 ### Let the reader switch
 
@@ -91,4 +103,6 @@ Translations are then made by a Syrtis scenario and recorded under the engine na
 - `LANG_CONFIG`, JSON: `{"source": "fr", "target": "en_GB"}`. Locales are Symfony's identifiers, as they are: the scenario follows them, nothing converts them.
 - a conversation message, JSON: the texts by key, `{"page.title": "Bienvenue [#0]", "7": "Payer"}`.
 
-The scenario answers with a conversation message holding a JSON object of the translations under the same keys, leaving the `[#n]` placeholders untouched. A reply that is not a JSON object, or leaves keys out, stops the command: nothing is recorded as translated.
+The scenario answers with a conversation message holding a JSON object of the translations under the same keys, leaving the `[#n]` placeholders untouched. Keys it leaves out are asked once more on their own; those still missing stay untranslated — read in the fallback locale, reported by the command — and are asked again on the next run. A reply that is not a JSON object stops the command.
+
+Several runs may go at once, each for its own locales: the lock is re-read and updated under a file lock for each file, so none erases the others' entries.

@@ -11,13 +11,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Wexample\SymfonyHelpers\Service\BundleService;
 use Wexample\SymfonyTranslations\Service\ContentTranslationService;
+use Wexample\SymfonyTranslations\Service\LocaleService;
 use Wexample\SymfonyTranslations\Service\PendingTextTranslator;
 use Wexample\SymfonyTranslations\Service\TextTranslationService;
 use Wexample\SymfonyTranslations\Translation\Translator;
 
 /**
  * Translates ahead of time what readers would otherwise wait for: every
- * #[Translatable] field of every entity of a class, or of every class.
+ * #[Translatable] field of every entity of a class, or of every class, into
+ * the locales given or else every content locale.
  */
 class TranslateContentCommand extends AbstractTranslationCommand
 {
@@ -29,6 +31,7 @@ class TranslateContentCommand extends AbstractTranslationCommand
         private readonly ContentTranslationService $contentTranslationService,
         private readonly TextTranslationService $textTranslationService,
         private readonly EntityManagerInterface $entityManager,
+        private readonly LocaleService $localeService,
     ) {
         parent::__construct($translator, $bundleService);
     }
@@ -38,7 +41,7 @@ class TranslateContentCommand extends AbstractTranslationCommand
         parent::configure();
 
         $this
-            ->addArgument('to', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'The locales to translate into')
+            ->addArgument('to', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'The locales to translate into, every content locale if omitted')
             ->addOption('entity', null, InputOption::VALUE_REQUIRED, 'The entity class, every class having #[Translatable] fields if omitted')
             ->addOption('force', null, InputOption::VALUE_NONE, 'Translate again what an engine already translated; values written by hand are kept')
             ->addOption('batch-size', null, InputOption::VALUE_REQUIRED, 'Entities loaded at once', '50');
@@ -49,17 +52,31 @@ class TranslateContentCommand extends AbstractTranslationCommand
         OutputInterface $output
     ): int {
         $io = new SymfonyStyle($input, $output);
-        $locales = array_values(array_unique($input->getArgument('to')));
+        $sourceLocale = $this->contentTranslationService->getSourceLocale();
+        $locales = array_values(array_unique($input->getArgument('to'))) ?: array_values(array_diff(
+            $this->localeService->getContentLocales(),
+            [$sourceLocale]
+        ));
         $force = (bool) $input->getOption('force');
         $batchSize = max(1, (int) $input->getOption('batch-size'));
         $translatableClasses = $this->contentTranslationService->getTranslatableClasses();
         $classes = $input->getOption('entity') ? [$input->getOption('entity')] : $translatableClasses;
-        $sourceLocale = $this->contentTranslationService->getSourceLocale();
 
         if (in_array($sourceLocale, $locales, true)) {
             $io->error('Content is written in "'.$sourceLocale.'" already.');
 
             return Command::FAILURE;
+        }
+
+        foreach ($locales as $locale) {
+            if (! $this->localeService->hasContentLocale($locale)) {
+                $io->error(sprintf(
+                    'Not a content locale: "%s". Add it to framework.enabled_locales, or to wexample_symfony_translations.content_locales.',
+                    $locale
+                ));
+
+                return Command::FAILURE;
+            }
         }
 
         foreach ($classes as $class) {

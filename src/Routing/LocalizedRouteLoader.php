@@ -4,6 +4,7 @@ namespace Wexample\SymfonyTranslations\Routing;
 
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\Config\Loader\LoaderResolverInterface;
+use Symfony\Component\DependencyInjection\Config\ContainerParametersResource;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 use Wexample\SymfonyTranslations\Controller\LocaleRedirectController;
@@ -36,6 +37,13 @@ final class LocalizedRouteLoader implements LoaderInterface
 
         if ($collection instanceof RouteCollection && $this->localeService->isRoutingEnabled()) {
             $this->localize($collection);
+
+            // The cached routes depend on the enabled locales, not only on the
+            // routing files: a locale enabled rebuilds them as well.
+            $collection->addResource(new ContainerParametersResource([
+                'kernel.default_locale' => $this->localeService->getDefaultLocale(),
+                'kernel.enabled_locales' => $this->localeService->getEnabledLocales(),
+            ]));
         }
 
         return $collection;

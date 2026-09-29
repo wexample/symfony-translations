@@ -952,6 +952,7 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
  * }
  * @psalm-type WexampleSymfonyTranslationsConfig = array{
  *     translations_paths?: list<scalar|null>,
+ *     content_locales?: list<scalar|null>,
  *     locale_routing?: bool|array{
  *         enabled?: bool, // Default: false
  *         excluded_paths?: list<scalar|null>,

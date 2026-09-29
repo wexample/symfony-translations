@@ -37,6 +37,12 @@ class Configuration implements ConfigurationInterface
                 ->arrayNode('translations_paths')
                     ->scalarPrototype()->end()
                 ->end()
+                // Languages entity content may be read in beyond framework.enabled_locales,
+                // those having an interface: through the api, or translated() given a locale.
+                ->arrayNode('content_locales')
+                    ->scalarPrototype()->end()
+                    ->defaultValue([])
+                ->end()
                 // Prefixes every page url with /{_locale}, the locales being framework.enabled_locales.
                 ->arrayNode('locale_routing')
                     ->canBeEnabled()
