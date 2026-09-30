@@ -14,12 +14,15 @@ use Wexample\SymfonyTranslations\Service\LocaleService;
 use Wexample\SymfonyTranslations\Service\PendingTextTranslator;
 use Wexample\SymfonyTranslations\Service\TextTranslationService;
 use Wexample\SymfonyTranslations\Service\TranslationFileService;
+use Wexample\SymfonyTranslations\Service\TranslationStorageService;
 use Wexample\SymfonyTranslations\Translation\Translator;
 
 /**
- * Translates the interface: every `.<from>.yml` of the application gets its
- * `.<to>.yml` for each target locale, and the target locales are enabled. The bundles' files only when
- * asked for, as they belong to their packages.
+ * Translates the interface: every element of the application gets its `<to>`
+ * locale — a `.<to>.yml`, or a block of its `.trans.yml` — for each target
+ * locale, and the target locales are enabled. The bundles' files only when
+ * asked for, as they belong to their packages. With a `storage` configured, the
+ * elements are converted to it first.
  */
 class TranslateFilesCommand extends AbstractTranslationCommand
 {
@@ -32,7 +35,9 @@ class TranslateFilesCommand extends AbstractTranslationCommand
         private readonly TextTranslationService $textTranslationService,
         private readonly LocaleConfigService $localeConfigService,
         private readonly LocaleService $localeService,
+        private readonly TranslationStorageService $translationStorageService,
         private readonly string $projectDir,
+        private readonly ?string $storage = null,
     ) {
         parent::__construct($translator, $bundleService);
     }
@@ -68,6 +73,20 @@ class TranslateFilesCommand extends AbstractTranslationCommand
 
         if (PendingTextTranslator::ENGINE_NAME === $this->textTranslationService->getEngineName()) {
             $io->warning('No translation engine is configured yet: texts are copied untranslated, and will be translated on the first run with a real engine.');
+        }
+
+        if (null !== $this->storage) {
+            $converted = $this->translationStorageService->convert(
+                $this->storage,
+                $from,
+                $input->getOption('path'),
+                (bool) $input->getOption('include-bundles'),
+                $dryRun
+            );
+
+            if ($converted > 0) {
+                $io->note(sprintf('%d elements %s to the "%s" storage.', $converted, $dryRun ? 'to convert' : 'converted', $this->storage));
+            }
         }
 
         foreach ($locales as $to) {

@@ -4,10 +4,14 @@ namespace Wexample\SymfonyTranslations\Service;
 
 use Symfony\Component\Yaml\Yaml;
 use Wexample\PhpYaml\YamlIncludeResolver;
+use Wexample\SymfonyTranslations\Helper\TransFileHelper;
 use Wexample\SymfonyTranslations\Translation\Translator;
 
 /**
- * Writes the `.<target>.yml` next to every `.<source>.yml` the application reads.
+ * Translates every element the application reads: the `.<target>.yml` next to
+ * its `.<source>.yml`, or the target block of its `.trans.yml`. The element
+ * decides: one holding a `.trans.yml` is read from and written into it, the
+ * blocks of the other locales left as they are.
  *
  * Only the application's own files by default: a bundle's live in its package,
  * and writing there from an application is a change to a dependency — wanted
@@ -16,10 +20,12 @@ use Wexample\SymfonyTranslations\Translation\Translator;
  * A key is translated when the target file lacks it, or when its source changed
  * since it was translated. What the target holds without a trace in the lock —
  * a wording written by hand — is kept as it is. The lock sits at the root of
- * each translations directory and records, per target file and key, the hash of
- * the source the translation was made from and the engine that made it. It is
- * written after each file, so that an interrupted run leaves no translation
- * looking as if it were written by hand.
+ * each translations directory and records, per element, locale and key, the
+ * hash of the source the translation was made from and the engine that made
+ * it. Its entries are named after the per-locale file whichever way the element
+ * is stored, so that they survive a conversion. It is written after each file,
+ * so that an interrupted run leaves no translation looking as if it were
+ * written by hand.
  *
  * A target file the lock knows, whose source is gone, is removed with its
  * entry, unless orphans are kept. One the lock does not know was not written
@@ -71,19 +77,24 @@ class TranslationFileService
             $lockPath = $basePath.self::LOCK_FILE_NAME;
             $lock = is_file($lockPath) ? json_decode(file_get_contents($lockPath), true, flags: JSON_THROW_ON_ERROR) : [];
 
-            foreach ($this->findSourceFiles($basePath, $sourceLocale) as $sourcePath) {
-                if (null !== $pathFilter && ! str_contains($sourcePath, $pathFilter)) {
+            foreach ($this->findElements($basePath, $sourceLocale) as $element) {
+                if (null !== $pathFilter && ! str_contains($element, $pathFilter)) {
                     continue;
                 }
 
-                $targetPath = substr($sourcePath, 0, -strlen('.'.$sourceLocale.'.yml')).'.'.$targetLocale.'.yml';
-                $targetKey = substr($targetPath, strlen($basePath));
+                // A .trans.yml holding other locales only.
+                if (null === $source = $this->readLocale($element, $sourceLocale)) {
+                    continue;
+                }
+
+                $targetPath = $this->getTargetPath($element, $targetLocale);
+                $targetKey = substr($element, strlen($basePath)).'.'.$targetLocale.'.yml';
                 $fileLock = $lock[$targetKey] ?? [];
 
-                $existingTarget = is_file($targetPath) ? Yaml::parseFile($targetPath) : null;
+                $existingTarget = $this->readLocale($element, $targetLocale);
 
                 [$target, $translatedCount, $untranslatedKeys] = $this->translateTree(
-                    Yaml::parseFile($sourcePath) ?? [],
+                    $source,
                     $existingTarget ?? [],
                     $fileLock,
                     $sourceLocale,
@@ -104,7 +115,7 @@ class TranslationFileService
                     $stats['written']++;
 
                     if (! $dryRun) {
-                        file_put_contents($targetPath, Yaml::dump($target, 20, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK));
+                        $this->writeLocale($element, $targetLocale, $target);
                     }
                 }
 
@@ -132,11 +143,15 @@ class TranslationFileService
             $targetSuffix = '.'.$targetLocale.'.yml';
 
             foreach (array_keys($lock) as $targetKey) {
-                $targetPath = $basePath.$targetKey;
+                if (! str_ends_with($targetKey, $targetSuffix)) {
+                    continue;
+                }
 
-                if (! str_ends_with($targetKey, $targetSuffix)
-                    || (null !== $pathFilter && ! str_contains($targetPath, $pathFilter))
-                    || is_file(substr($targetPath, 0, -strlen($targetSuffix)).'.'.$sourceLocale.'.yml')) {
+                $element = $basePath.substr($targetKey, 0, -strlen($targetSuffix));
+                $targetPath = $this->getTargetPath($element, $targetLocale);
+
+                if ((null !== $pathFilter && ! str_contains($targetPath, $pathFilter))
+                    || null !== $this->readLocale($element, $sourceLocale)) {
                     continue;
                 }
 
@@ -144,10 +159,7 @@ class TranslationFileService
                 unset($lock[$targetKey]);
 
                 if (! $dryRun) {
-                    if (is_file($targetPath)) {
-                        unlink($targetPath);
-                    }
-
+                    $this->writeLocale($element, $targetLocale, null);
                     $this->updateLock($lockPath, $targetKey, null);
                 }
 
@@ -158,6 +170,71 @@ class TranslationFileService
         }
 
         return $stats;
+    }
+
+    /**
+     * One locale of an element, from its `.trans.yml` if it has one, else from
+     * its per-locale file.
+     *
+     * @param string $element The path of its files, without their suffix
+     * @return array|null Null when the element does not have the locale
+     */
+    public function readLocale(
+        string $element,
+        string $locale
+    ): ?array {
+        if (is_file($element.TransFileHelper::SUFFIX)) {
+            $content = Yaml::parseFile($element.TransFileHelper::SUFFIX)[$locale] ?? null;
+
+            if (null !== $content) {
+                return (array) $content;
+            }
+        }
+
+        $path = $element.'.'.$locale.'.yml';
+
+        return is_file($path) ? (Yaml::parseFile($path) ?? []) : null;
+    }
+
+    /**
+     * Into the element's `.trans.yml` if it has one, leaving the other blocks as
+     * they are, else into its per-locale file.
+     *
+     * @param array|null $tree Null removes the locale, and the `.trans.yml` left without any
+     */
+    private function writeLocale(
+        string $element,
+        string $locale,
+        ?array $tree
+    ): void {
+        $transPath = $element.TransFileHelper::SUFFIX;
+
+        if (! is_file($transPath)) {
+            $path = $element.'.'.$locale.'.yml';
+
+            if (null !== $tree) {
+                file_put_contents($path, Yaml::dump($tree, TransFileHelper::DUMP_INLINE, TransFileHelper::DUMP_INDENT, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK));
+            } elseif (is_file($path)) {
+                unlink($path);
+            }
+
+            return;
+        }
+
+        $content = TransFileHelper::writeBlock(file_get_contents($transPath), $locale, $tree);
+
+        if ('' === trim($content)) {
+            unlink($transPath);
+        } else {
+            file_put_contents($transPath, $content);
+        }
+    }
+
+    private function getTargetPath(
+        string $element,
+        string $locale
+    ): string {
+        return is_file($element.TransFileHelper::SUFFIX) ? $element.TransFileHelper::SUFFIX.'#'.$locale : $element.'.'.$locale.'.yml';
     }
 
     /**
@@ -372,7 +449,7 @@ class TranslationFileService
     /**
      * @return string[] With a trailing slash, each directory once
      */
-    private function getBasePaths(bool $includeBundles): array
+    public function getBasePaths(bool $includeBundles): array
     {
         $basePaths = [];
 
@@ -399,27 +476,32 @@ class TranslationFileService
     }
 
     /**
-     * @return string[]
+     * The elements having a `.<source>.yml` or a `.trans.yml`, each once.
+     *
+     * @return string[] The path of their files, without their suffix
      */
-    private function findSourceFiles(
+    private function findElements(
         string $basePath,
         string $sourceLocale
     ): array {
-        $suffix = '.'.$sourceLocale.'.yml';
-        $files = [];
+        $suffixes = ['.'.$sourceLocale.'.yml', TransFileHelper::SUFFIX];
+        $elements = [];
 
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($basePath, \FilesystemIterator::SKIP_DOTS)
         );
 
         foreach ($iterator as $file) {
-            if (str_ends_with($file->getFilename(), $suffix)) {
-                $files[] = $file->getPathname();
+            foreach ($suffixes as $suffix) {
+                if (str_ends_with($file->getFilename(), $suffix)) {
+                    $element = substr($file->getPathname(), 0, -strlen($suffix));
+                    $elements[$element] = $element;
+                }
             }
         }
 
-        sort($files);
+        sort($elements);
 
-        return $files;
+        return array_values($elements);
     }
 }

@@ -23,6 +23,7 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Translation\MessageCatalogueInterface;
 use Symfony\Component\Translation\TranslatorBagInterface;
+use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\Translation\LocaleAwareInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\Helpers\Helper\ArrayHelper;
@@ -31,6 +32,7 @@ use Wexample\Helpers\Helper\FileHelper;
 use Wexample\Helpers\Helper\VariableSpecialHelper;
 use Wexample\PhpYaml\YamlIncludeResolver;
 use Wexample\SymfonyHelpers\Helper\VariableHelper;
+use Wexample\SymfonyTranslations\Helper\TransFileHelper;
 use Wexample\SymfonyTemplate\Helper\TemplateHelper;
 
 class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface
@@ -86,6 +88,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * Tracks which locales have had their catalogue populated for this request lifecycle.
      */
     private array $cataloguesPopulated = [];
+
+    /**
+     * Every locale of the `.trans.yml` files, by path.
+     */
+    private array $transFiles = [];
 
     /**
      * @throws InvalidArgumentException|Exception
@@ -200,6 +207,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 continue; // Skip non-existent directories
             }
 
+            $transFiles = [];
+
             FileHelper::scanDirectoryForFiles(
                 directoryPath: $basePath,
                 extension: FileHelper::FILE_EXTENSION_YML,
@@ -209,7 +218,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     $locale,
                     $basePath,
                     $key,
-                    $resolver
+                    $resolver,
+                    &$transFiles
                 ) {
                     $filename = $file->getFilename();
                     $expectedSuffix = FileHelper::EXTENSION_SEPARATOR . $locale . FileHelper::EXTENSION_SEPARATOR . FileHelper::FILE_EXTENSION_YML;
@@ -222,10 +232,30 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                         if (! empty($domain)) {
                             $resolver->registerFile($domain, $filePath);
                         }
+                    } elseif (str_ends_with($filename, TransFileHelper::SUFFIX)) {
+                        $transFiles[] = $file->getPathname();
                     }
                 }
             );
+
+            // After the per-locale files: an element holding a .trans.yml is read from it.
+            foreach ($transFiles as $filePath) {
+                $content = $this->parseTransFile($filePath)[$locale] ?? null;
+                $domain = $this->buildDomainFromPath($filePath, $basePath, is_string($key) ? $key : null);
+
+                if (is_array($content) && ! empty($domain)) {
+                    $resolver->registerContent($domain, $content);
+                }
+            }
         }
+    }
+
+    /**
+     * Parsed once, read for every locale.
+     */
+    private function parseTransFile(string $filePath): array
+    {
+        return $this->transFiles[$filePath] ??= (Yaml::parseFile($filePath) ?? []);
     }
 
     /**

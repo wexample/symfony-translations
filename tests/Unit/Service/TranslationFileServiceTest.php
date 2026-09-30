@@ -4,6 +4,7 @@ namespace Wexample\SymfonyTranslations\Tests\Unit\Service;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Yaml\Yaml;
+use Wexample\SymfonyTranslations\Helper\TransFileHelper;
 use Wexample\SymfonyTranslations\Interface\TextTranslatorInterface;
 use Wexample\SymfonyTranslations\Service\PendingTextTranslator;
 use Wexample\SymfonyTranslations\Service\TextTranslationService;
@@ -261,6 +262,58 @@ class TranslationFileServiceTest extends TestCase
             ['pages/index.de.yml', 'pages/other.de.yml', 'pages/index.fr.yml', 'pages/other.fr.yml'],
             array_keys($this->readLock())
         );
+    }
+
+    public function testWritesTheTargetBlockOfATransFileAndLeavesTheSourceAsWritten(): void
+    {
+        $source = "# Written by hand.\nen:\n  title: Hello   # greeting\n\n  button: Save\n";
+        file_put_contents($this->dir.'pages/index.trans.yml', $source);
+        $service = $this->createService($this->createEngine('fake'));
+
+        $service->translateFiles('en', 'fr');
+        $content = file_get_contents($this->dir.'pages/index.trans.yml');
+
+        $this->assertStringStartsWith($source, $content);
+        $this->assertSame(['title' => 'FR(HELLO)', 'button' => 'FR(SAVE)'], Yaml::parse($content)['fr']);
+        $this->assertFileDoesNotExist($this->dir.'pages/index.fr.yml');
+        $this->assertArrayHasKey('pages/index.fr.yml', $this->readLock());
+
+        // Layout alone changes nothing.
+        $source = str_replace("\n\n", "\n\n\n", $source);
+        file_put_contents($this->dir.'pages/index.trans.yml', $source.substr($content, strlen($source) - 1));
+        $stats = $service->translateFiles('en', 'fr');
+        $this->assertSame(0, $stats['translated']);
+        $this->assertSame(0, $stats['written']);
+
+        $service->translateFiles('en', 'de');
+        $content = file_get_contents($this->dir.'pages/index.trans.yml');
+        $this->assertSame(['en', 'fr', 'de'], array_keys(Yaml::parse($content)));
+        $this->assertStringStartsWith($source, $content);
+    }
+
+    public function testTranslatesFromAnyLocaleOfATransFile(): void
+    {
+        file_put_contents($this->dir.'pages/index.trans.yml', Yaml::dump(['en' => ['a' => 'One'], 'ja' => ['a' => 'Ichi']]));
+
+        $this->createService($this->createEngine('fake'))->translateFiles('ja', 'ko');
+
+        $this->assertSame(['a' => 'KO(ICHI)'], Yaml::parseFile($this->dir.'pages/index.trans.yml')['ko']);
+    }
+
+    public function testRemovesTheBlockWhoseSourceIsGone(): void
+    {
+        file_put_contents($this->dir.'pages/index.trans.yml', Yaml::dump(['en' => ['a' => 'One'], 'de' => ['a' => 'Eins']]));
+        $service = $this->createService($this->createEngine('fake'));
+        $service->translateFiles('en', 'fr');
+
+        file_put_contents(
+            $this->dir.'pages/index.trans.yml',
+            TransFileHelper::writeBlock(file_get_contents($this->dir.'pages/index.trans.yml'), 'en', null)
+        );
+        $stats = $service->translateFiles('en', 'fr');
+
+        $this->assertSame(1, $stats['removed']);
+        $this->assertSame(['de' => ['a' => 'Eins']], Yaml::parseFile($this->dir.'pages/index.trans.yml'));
     }
 
     private function createFailingEngine(): TextTranslatorInterface

@@ -52,6 +52,7 @@ services:
     Wexample\SymfonyTranslations\Command\TranslateFilesCommand:
         arguments:
             $projectDir: '%kernel.project_dir%'
+            $storage: '%wexample_symfony_translations.storage%'
 
     # Above the per-entity normalizers, so that it wraps them rather than being skipped.
     Wexample\SymfonyTranslations\Serializer\ContentTranslationNormalizer:

@@ -94,9 +94,9 @@ Both facilities below record the engine name next to each translation, and treat
 
 ### Interface files
 
-{{ path("src/Service/TranslationFileService.php") }} writes `<name>.<target>.yml` next to each `<name>.<source>.yml` under the translation paths. By default only the application's: a path counts when its resolved location is inside the project and outside its `vendor/`, which excludes bundles installed there and bundles symlinked from elsewhere alike.
+{{ path("src/Service/TranslationFileService.php") }} works per element — the path of its files without their suffix — and writes `<name>.<target>.yml` next to each `<name>.<source>.yml` under the translation paths, or, for an element holding a `<name>.trans.yml`, its `<target>:` block. {{ path("src/Helper/TransFileHelper.php") }} splits that file into top-level blocks as text and replaces one without touching the others; the `Translator` registers each block as the element's domain in its locale, after the per-locale files, through `YamlIncludeResolver::registerContent()`. By default only the application's: a path counts when its resolved location is inside the project and outside its `vendor/`, which excludes bundles installed there and bundles symlinked from elsewhere alike.
 
-The target mirrors the source's keys and order. Per key, `translateTree()` decides from the target and the lock — `.translations.lock.json` at the root of each translation path, recording per target file and key the source hash and the engine:
+The target mirrors the source's keys and order. Per key, `translateTree()` decides from the target and the lock — `.translations.lock.json` at the root of each translation path, recording per target file and key the source hash and the engine — entries named after the per-locale file even for a `.trans.yml`, so that a conversion leaves them valid:
 
 - no string, a reference, `%`, or anything under `~extends` — copied as is;
 - present in the target with no lock entry — written by hand, kept;
@@ -123,6 +123,7 @@ The commands in {{ path("src/Command") }} all extend `AbstractTranslationCommand
 - `translations:catalogue` tables `getCatalogue($locale)->all()` with an optional `--domain` filter;
 - `translations:trans` translates one key with JSON-encoded `--parameters`;
 - `translations:translate-files` runs `TranslationFileService` for each target locale, then enables it;
+- `translations:convert-files` runs `TranslationStorageService`, moving elements between per-locale files and `.trans.yml`;
 - `translations:translate-content` runs `ContentTranslationService`, for each target locale, over every entity of one class, or of every class having marked fields, clearing the entity manager between batches.
 
 ### Tests

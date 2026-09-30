@@ -33,6 +33,10 @@ class WexampleSymfonyTranslationsExtension extends AbstractWexampleSymfonyExtens
             $config['content_locales']
         );
         $container->setParameter(
+            'wexample_symfony_translations.storage',
+            $config['storage']
+        );
+        $container->setParameter(
             'wexample_symfony_translations.locale_routing.enabled',
             $config['locale_routing']['enabled']
         );

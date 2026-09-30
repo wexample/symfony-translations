@@ -4,6 +4,7 @@ namespace Wexample\SymfonyTranslations\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Wexample\SymfonyTranslations\Service\TranslationStorageService;
 
 class Configuration implements ConfigurationInterface
 {
@@ -47,6 +48,16 @@ class Configuration implements ConfigurationInterface
                 ->arrayNode('content_locales')
                     ->scalarPrototype()->end()
                     ->defaultValue([])
+                ->end()
+                // How the interface files are stored: `locale`, one .<locale>.yml per language,
+                // or `trans`, every language of an element in its .trans.yml. translations:translate-files
+                // converts the elements it writes into it; left unset, each element keeps its own.
+                ->scalarNode('storage')
+                    ->defaultNull()
+                    ->validate()
+                        ->ifNotInArray([null, ...TranslationStorageService::STORAGES])
+                        ->thenInvalid('Expected '.implode(' or ', TranslationStorageService::STORAGES).', got %s.')
+                    ->end()
                 ->end()
                 // Prefixes every page url with /{_locale}, the locales being framework.enabled_locales.
                 ->arrayNode('locale_routing')

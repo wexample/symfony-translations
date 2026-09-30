@@ -28,7 +28,7 @@ php bin/console translations:translate-files fr
 php bin/console translations:translate-files fr es de    # several locales, one after the other
 ```
 
-Writes a `.fr.yml` next to every `.en.yml` of the application, then adds `fr` to `framework.enabled_locales` in `config/packages/translation.yaml`. Only the application's own files: the bundles' belong to their packages. `--include-bundles` writes into them as well, which is what a developer working on the bundles through symlinks wants.
+Writes a `.fr.yml` next to every `.en.yml` of the application — or a `fr:` block into its `.trans.yml`, see below — then adds `fr` to `framework.enabled_locales` in `config/packages/translation.yaml`. Only the application's own files: the bundles' belong to their packages. `--include-bundles` writes into them as well, which is what a developer working on the bundles through symlinks wants.
 
 A key is translated when the target file lacks it, or when its source changed since. A wording already in the target file without a trace in the `.translations.lock.json` beside it was written by hand, and is never overwritten. References (`@page::title`), the `%` wildcard and `~extends` are copied as they are; parameters (`%name%`, `{count}`) and markup never reach the engine. A target file the lock knows whose source file is gone is removed with its lock entry; one the lock does not know was not written by the command, and stays.
 
@@ -42,6 +42,37 @@ A key is translated when the target file lacks it, or when its source changed si
 | `--include-bundles` | Also write into the bundles' translation directories |
 
 A key missing in a language is read in the fallback one, so a page translated in part shows the rest in the default language rather than raw keys.
+
+The source is the application's default locale (`framework.default_locale`, `en` when nothing is set). `--from` takes another one, even one that is not the default: `translations:translate-files ko --from=ja` translates Korean from the Japanese wording.
+
+#### One file per language, or one file per element
+
+Every element — a page, a component — stores its languages one of two ways, side by side in the same application:
+
+```yaml
+# index.en.yml, index.fr.yml, index.ar.yml…   one file per language
+title: Hello
+
+# index.trans.yml                             every language in one file
+en:
+  title: Hello
+fr:
+  title: Bonjour
+```
+
+The element decides: one holding a `.trans.yml` is read from it and written into it, else its `.<locale>.yml` files are. The command only ever rewrites the blocks of the target languages: the source block stays as written, comments and layout included. A change of layout alone — a blank line, a comment, quotes — translates nothing: each key is compared by its value.
+
+```bash
+php bin/console translations:convert-files trans     # every element into its .trans.yml
+php bin/console translations:convert-files locale    # back to one file per language
+```
+
+Converting keeps each file's text as written and needs no new translation: the lock names its entries after the per-locale files either way. `--path`, `--include-bundles` and `--dry-run` work as for `translate-files`. A `.<name>.yml` whose name is not a locale — `.ai.yml` — is left alone. To keep the application in one storage, `translate-files` converts first the elements it writes:
+
+```yaml
+wexample_symfony_translations:
+    storage: trans    # or locale; unset, each element keeps its own
+```
 
 ### 3. Translate the content
 
