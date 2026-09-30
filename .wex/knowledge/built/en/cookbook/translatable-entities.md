@@ -34,12 +34,12 @@ php bin/console doctrine:migrations:migrate
 
 In a template, `translated()` wraps the entity, or a list of them:
 
-{% raw %}```twig
+```twig
 {% set article = translated(article) %}
 <h1>{{ article.title }}</h1>
 <p>{{ article.summary }}</p>
 <a href="{{ path('article_show', { slug: article.slug }) }}">…</a>
-```{% endraw %}
+```
 
 The marked fields come in the current language, anything else is read from the entity. The wrapper is read-only: the entity it holds is never changed, so saving it never writes a translation over the source. `translated(article, 'de')` reads another language than the current one.
 

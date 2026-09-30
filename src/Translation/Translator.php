@@ -32,8 +32,8 @@ use Wexample\Helpers\Helper\FileHelper;
 use Wexample\Helpers\Helper\VariableSpecialHelper;
 use Wexample\PhpYaml\YamlIncludeResolver;
 use Wexample\SymfonyHelpers\Helper\VariableHelper;
-use Wexample\SymfonyTranslations\Helper\TransFileHelper;
 use Wexample\SymfonyTemplate\Helper\TemplateHelper;
+use Wexample\SymfonyTranslations\Helper\TransFileHelper;
 
 class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface
 {

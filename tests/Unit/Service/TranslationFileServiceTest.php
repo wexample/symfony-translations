@@ -155,7 +155,7 @@ class TranslationFileServiceTest extends TestCase
         file_put_contents($this->dir.'pages/a.en.yml', Yaml::dump(['a' => 'One']));
         file_put_contents($this->dir.'pages/b.en.yml', Yaml::dump(['b' => 'Two']));
 
-        $engine = new class implements TextTranslatorInterface {
+        $engine = new class () implements TextTranslatorInterface {
             public function translate(
                 array $texts,
                 string $sourceLocale,
@@ -229,7 +229,7 @@ class TranslationFileServiceTest extends TestCase
 
         // The German run happens while the French one is between two files.
         $german = $this->createService($this->createEngine('fake'));
-        $engine = new class($german) implements TextTranslatorInterface {
+        $engine = new class ($german) implements TextTranslatorInterface {
             private bool $interleaved = false;
 
             public function __construct(
@@ -318,7 +318,7 @@ class TranslationFileServiceTest extends TestCase
 
     private function createFailingEngine(): TextTranslatorInterface
     {
-        return new class implements TextTranslatorInterface {
+        return new class () implements TextTranslatorInterface {
             public function translate(
                 array $texts,
                 string $sourceLocale,
@@ -339,7 +339,7 @@ class TranslationFileServiceTest extends TestCase
      */
     private function createForgetfulEngine(string $forgottenKey): TextTranslatorInterface
     {
-        return new class($forgottenKey) implements TextTranslatorInterface {
+        return new class ($forgottenKey) implements TextTranslatorInterface {
             public function __construct(
                 private readonly string $forgottenKey,
             ) {
@@ -393,7 +393,7 @@ class TranslationFileServiceTest extends TestCase
         string $name,
         bool $translates = true
     ): TextTranslatorInterface {
-        return new class($name, $translates) implements TextTranslatorInterface {
+        return new class ($name, $translates) implements TextTranslatorInterface {
             public function __construct(
                 private readonly string $name,
                 private readonly bool $translates,

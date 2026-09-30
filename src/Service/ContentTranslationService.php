@@ -136,11 +136,13 @@ class ContentTranslationService
 
             if (null === $source || '' === $source) {
                 $values[$field] = $source;
+
                 continue;
             }
 
             if (null !== $row && null === $row['engine']) {
                 $values[$field] = $row['value'];
+
                 continue;
             }
 

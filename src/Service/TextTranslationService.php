@@ -33,6 +33,7 @@ class TextTranslationService
         foreach ($texts as $key => $text) {
             if (! preg_match('/\p{L}/u', $text) || $sourceLocale === $targetLocale) {
                 $translations[$key] = $text;
+
                 continue;
             }
 

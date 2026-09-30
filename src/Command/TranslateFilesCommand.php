@@ -97,6 +97,7 @@ class TranslateFilesCommand extends AbstractTranslationCommand
             if (! flock($runLock, LOCK_EX | LOCK_NB)) {
                 $io->warning(sprintf('Another run is translating "%s" in this application: skipped.', $to));
                 fclose($runLock);
+
                 continue;
             }
 

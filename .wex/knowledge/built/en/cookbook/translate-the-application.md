@@ -101,9 +101,9 @@ The content locales are the interface ones plus these. An api request is answere
 
 `wexample/symfony-translations-ds` ships the switcher, a menu of every enabled language, each leading to the same page in it:
 
-{% raw %}```twig
+```twig
 {{ component(render_pass, '@WexampleSymfonyTranslationsDsBundle/components/locale-switcher') }}
-```{% endraw %}
+```
 
 Without it, `locales()` returns the same list — `code`, `name` as the language names itself, `url` of the current page in it, `current`.
 

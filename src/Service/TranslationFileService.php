@@ -301,6 +301,7 @@ class TranslationFileService
 
             if (! is_string($value) || $this->isVerbatim($path, $value)) {
                 $this->setAt($target, $path, $value);
+
                 continue;
             }
 
