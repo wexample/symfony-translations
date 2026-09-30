@@ -19,7 +19,9 @@ use Wexample\SymfonyTranslations\Translation\Translator;
 /**
  * Translates ahead of time what readers would otherwise wait for: every
  * #[Translatable] field of every entity of a class, or of every class, into
- * the locales given or else every content locale.
+ * the locales given or else every content locale. From the entities' own text,
+ * or from another locale's translation with `--from`: the values made keep the
+ * locale they were made from, and follow its changes.
  */
 class TranslateContentCommand extends AbstractTranslationCommand
 {
@@ -42,6 +44,7 @@ class TranslateContentCommand extends AbstractTranslationCommand
 
         $this
             ->addArgument('to', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'The locales to translate into, every content locale if omitted')
+            ->addOption('from', null, InputOption::VALUE_REQUIRED, 'Translate from this locale\'s translation rather than from the text of the entities, which is in the default locale')
             ->addOption('entity', null, InputOption::VALUE_REQUIRED, 'The entity class, every class having #[Translatable] fields if omitted')
             ->addOption('force', null, InputOption::VALUE_NONE, 'Translate again what an engine already translated; values written by hand are kept')
             ->addOption('batch-size', null, InputOption::VALUE_REQUIRED, 'Entities loaded at once', '50');
@@ -62,8 +65,22 @@ class TranslateContentCommand extends AbstractTranslationCommand
         $translatableClasses = $this->contentTranslationService->getTranslatableClasses();
         $classes = $input->getOption('entity') ? [$input->getOption('entity')] : $translatableClasses;
 
+        $from = $input->getOption('from');
+
         if (in_array($sourceLocale, $locales, true)) {
             $io->error('Content is written in "'.$sourceLocale.'" already.');
+
+            return Command::FAILURE;
+        }
+
+        if (null !== $from && in_array($from, $locales, true)) {
+            $io->error('The source locale is among the target ones: '.$from);
+
+            return Command::FAILURE;
+        }
+
+        if (null !== $from && $from !== $sourceLocale && ! $this->localeService->hasContentLocale($from)) {
+            $io->error('Not a content locale: "'.$from.'".');
 
             return Command::FAILURE;
         }
@@ -93,7 +110,7 @@ class TranslateContentCommand extends AbstractTranslationCommand
 
         foreach ($locales as $to) {
             foreach ($classes as $class) {
-                $io->section($class.' → '.$to);
+                $io->section($class.' '.($from ?? $sourceLocale).' → '.$to);
 
                 $query = $this->entityManager->createQueryBuilder()
                     ->select('e')
@@ -104,7 +121,7 @@ class TranslateContentCommand extends AbstractTranslationCommand
                 $progress = $io->createProgressBar();
 
                 foreach ($query->toIterable() as $entity) {
-                    $this->contentTranslationService->translateEntity($entity, $to, $force);
+                    $this->contentTranslationService->translateEntity($entity, $to, $force, $from);
                     $progress->advance();
 
                     if (0 === ++$count % $batchSize) {

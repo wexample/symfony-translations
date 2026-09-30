@@ -86,6 +86,8 @@ php bin/console translations:translate-content fr --entity='App\Entity\Article'
 
 Without it nothing is lost: a field is translated the first time it is read in a language, and stored. The command only spares the first readers the wait.
 
+`--from=ja` translates from the Japanese translation instead of the entity's own text. Each value records the locale it was made from, and keeps it: it is made again, from Japanese, when the Japanese one changes. Adding the `source_locale` column of `content_translation` takes a migration in the application.
+
 Content may be read in more languages than the interface has — through the api, or `translated(article, 'it')` — as it costs no file, only rows made on demand. Those are listed apart:
 
 ```yaml

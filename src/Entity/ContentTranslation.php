@@ -38,6 +38,14 @@ class ContentTranslation extends AbstractEntity
     #[ORM\Column(name: 'source_hash', type: Types::STRING, length: 64)]
     protected string $sourceHash;
 
+    /**
+     * The locale the value was translated from, null for the entity's own text.
+     * Another one's translation when the value was made from it: the source hash
+     * is then that translation's.
+     */
+    #[ORM\Column(name: 'source_locale', type: Types::STRING, length: 16, nullable: true)]
+    protected ?string $sourceLocale = null;
+
     /** The engine that made the value, null when it was written by hand and must never be replaced. */
     #[ORM\Column(name: 'engine', type: Types::STRING, length: 64, nullable: true)]
     protected ?string $engine = null;
@@ -80,6 +88,11 @@ class ContentTranslation extends AbstractEntity
     public function getSourceHash(): string
     {
         return $this->sourceHash;
+    }
+
+    public function getSourceLocale(): ?string
+    {
+        return $this->sourceLocale;
     }
 
     public function getEngine(): ?string

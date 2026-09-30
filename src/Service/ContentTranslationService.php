@@ -16,6 +16,10 @@ use Wexample\SymfonyTranslations\Translation\Translator;
  * first reader in a language waits for it, the next ones read it back. The
  * entity itself is never touched, so it keeps its source text and saving it
  * never writes a translation over the original.
+ *
+ * A value may be made from another locale's translation rather than from the
+ * entity's text: it records that locale, and is made again when that
+ * translation changes.
  */
 class ContentTranslationService
 {
@@ -76,20 +80,36 @@ class ContentTranslationService
 
     /**
      * @param bool $force Translate again what an engine already translated; values written by hand are kept
+     * @param string|null $sourceLocale Translate what is stale from this locale's translation rather than
+     *                                  from the entity's own text; a value keeps the locale it was made from
      * @return array<string, ?string> Every translatable field, by name
      */
     public function translateEntity(
         object $entity,
         ?string $locale = null,
-        bool $force = false
+        bool $force = false,
+        ?string $sourceLocale = null
     ): array {
-        $locale ??= $this->translator->getLocale();
+        return $this->resolveEntity($entity, $locale ?? $this->translator->getLocale(), $force, $sourceLocale, []);
+    }
+
+    /**
+     * @param array<string, true> $visiting The locales being resolved above this one: a value made
+     *                                      from one of them is made from the entity's text instead
+     */
+    private function resolveEntity(
+        object $entity,
+        string $locale,
+        bool $force,
+        ?string $sourceLocale,
+        array $visiting
+    ): array {
         $metadata = $this->getMetadata($entity);
         $entityClass = $metadata->getName();
         $entityId = $this->buildEntityId($metadata, $entity);
         $cacheKey = $entityClass.'#'.$entityId.'@'.$locale;
 
-        if (! $force && isset($this->resolved[$cacheKey])) {
+        if (! $force && null === $sourceLocale && isset($this->resolved[$cacheKey])) {
             return $this->resolved[$cacheKey];
         }
 
@@ -104,9 +124,11 @@ class ContentTranslationService
             return $this->resolved[$cacheKey] = $sources;
         }
 
+        $visiting[$locale] = true;
         $rows = $this->repository->findRowsForEntity($entityClass, $entityId, $locale);
         $engine = $this->textTranslationService->getEngineName();
         $values = [];
+        // Texts to translate, by the locale they are translated from, '' for the entity's own.
         $stale = [];
 
         foreach ($sources as $field => $source) {
@@ -114,20 +136,40 @@ class ContentTranslationService
 
             if (null === $source || '' === $source) {
                 $values[$field] = $source;
-            } elseif (null !== $row && null === $row['engine']) {
+                continue;
+            }
+
+            if (null !== $row && null === $row['engine']) {
                 $values[$field] = $row['value'];
-            } elseif (null === $row
+                continue;
+            }
+
+            $from = $sourceLocale ?? $row['source_locale'] ?? null;
+            $fromText = null;
+
+            if (null !== $from && $from !== $this->getSourceLocale() && ! isset($visiting[$from])) {
+                $fromText = $this->resolveEntity($entity, $from, false, null, $visiting)[$field];
+            }
+
+            if (null === $fromText || '' === $fromText) {
+                $from = null;
+                $fromText = $source;
+            }
+
+            if (null === $row
                 || $force
-                || $row['source_hash'] !== TextTranslationService::hashSource($source)
+                || $row['source_hash'] !== TextTranslationService::hashSource($fromText)
+                || $row['source_locale'] !== $from
                 || (PendingTextTranslator::ENGINE_NAME === $row['engine'] && PendingTextTranslator::ENGINE_NAME !== $engine)) {
-                $stale[$field] = $source;
+                $stale[$from ?? ''][$field] = $fromText;
             } else {
                 $values[$field] = $row['value'];
             }
         }
 
-        if (! empty($stale)) {
-            $translations = $this->textTranslationService->translate($stale, $this->getSourceLocale(), $locale);
+        foreach ($stale as $from => $texts) {
+            $from = '' === $from ? null : $from;
+            $translations = $this->textTranslationService->translate($texts, $from ?? $this->getSourceLocale(), $locale);
 
             foreach ($translations as $field => $translation) {
                 $values[$field] = $translation;
@@ -137,8 +179,9 @@ class ContentTranslationService
                     $field,
                     $locale,
                     $translation,
-                    TextTranslationService::hashSource($stale[$field]),
-                    $engine
+                    TextTranslationService::hashSource($texts[$field]),
+                    $engine,
+                    $from
                 );
             }
         }

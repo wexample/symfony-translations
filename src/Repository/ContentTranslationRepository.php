@@ -27,7 +27,7 @@ class ContentTranslationRepository extends AbstractRepository
     }
 
     /**
-     * @return array<string, array{value: ?string, source_hash: string, engine: ?string}> By field
+     * @return array<string, array{value: ?string, source_hash: string, source_locale: ?string, engine: ?string}> By field
      */
     public function findRowsForEntity(
         string $entityClass,
@@ -35,7 +35,7 @@ class ContentTranslationRepository extends AbstractRepository
         string $locale
     ): array {
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            'SELECT field, value, source_hash, engine FROM '.$this->getTableName()
+            'SELECT field, value, source_hash, source_locale, engine FROM '.$this->getTableName()
             .' WHERE entity_class = ? AND entity_id = ? AND locale = ?',
             [$entityClass, $entityId, $locale]
         );
@@ -45,6 +45,7 @@ class ContentTranslationRepository extends AbstractRepository
 
     /**
      * @param string|null $engine Null for a value written by hand
+     * @param string|null $sourceLocale The locale translated from, null for the entity's own text
      */
     public function saveValue(
         string $entityClass,
@@ -54,6 +55,7 @@ class ContentTranslationRepository extends AbstractRepository
         ?string $value,
         string $sourceHash,
         ?string $engine,
+        ?string $sourceLocale = null,
     ): void {
         $connection = $this->getEntityManager()->getConnection();
         $criteria = [
@@ -65,6 +67,7 @@ class ContentTranslationRepository extends AbstractRepository
         $data = [
             'value' => $value,
             'source_hash' => $sourceHash,
+            'source_locale' => $sourceLocale,
             'engine' => $engine,
             'updated_at' => new \DateTimeImmutable(),
         ];
