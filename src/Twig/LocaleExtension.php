@@ -28,6 +28,13 @@ class LocaleExtension extends AbstractExtension
                 ]
             ),
             new TwigFunction(
+                'locale_menu_items',
+                [
+                    $this,
+                    'localeMenuItems',
+                ]
+            ),
+            new TwigFunction(
                 'locale_direction',
                 [
                     $this->localeService,
@@ -61,6 +68,29 @@ class LocaleExtension extends AbstractExtension
         }
 
         return $locales;
+    }
+
+    /**
+     * The languages as the entries of a menu — the design system's
+     * `button_menu` — each a choice of one leading to the page in it, in the
+     * order of their names as each writes its own: a list read by looking for
+     * one's language. Each names itself in its own tongue (`lang`), and is
+     * found by its code too (`data-filter`: « ar » finds العربية).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function localeMenuItems(): array
+    {
+        $locales = $this->locales();
+        usort($locales, fn (array $a, array $b) => strcasecmp($a['name'], $b['name']));
+
+        return array_map(fn (array $locale) => [
+            'label' => $locale['name'],
+            'checked' => $locale['current'],
+            'radio' => true,
+            'href' => $locale['url'] ?? '#',
+            'attr' => ['hreflang' => $locale['code'], 'lang' => $locale['code'], 'data-filter' => $locale['code']],
+        ], $locales);
     }
 
     /**
