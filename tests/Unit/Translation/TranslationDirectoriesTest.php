@@ -132,7 +132,6 @@ class TranslationDirectoriesTest extends AbstractTranslationTest
         // Mock the buildRegexForFilterKey method to return a simple regex
         $reflectionClass = new \ReflectionClass(Translator::class);
         $buildRegexMethod = $reflectionClass->getMethod('buildRegexForFilterKey');
-        $buildRegexMethod->setAccessible(true);
 
         // Verify the regex pattern is built correctly
         $this->assertEquals('/^welcome..*$/', $buildRegexMethod->invoke($translator, 'welcome.*'));

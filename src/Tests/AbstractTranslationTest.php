@@ -57,13 +57,13 @@ abstract class AbstractTranslationTest extends AbstractApplicationTestCase
         // Configure the has method to return true for our test keys
         $mockCatalogue->method('has')
             ->willReturnCallback(function ($id, $domain) use ($translations) {
-                return isset($translations[$domain][$id]);
+                return isset($translations[$domain ?? 'messages'][$id]);
             });
 
         // Configure the get method to return our translations
         $mockCatalogue->method('get')
             ->willReturnCallback(function ($id, $domain) use ($translations) {
-                return $translations[$domain][$id] ?? $id;
+                return $translations[$domain ?? 'messages'][$id] ?? $id;
             });
 
         // Configure the translator mock to return our catalogue
@@ -73,7 +73,7 @@ abstract class AbstractTranslationTest extends AbstractApplicationTestCase
         // Configure the translator mock to return our test translations
         $this->symTranslator->method('trans')
             ->willReturnCallback(function ($id, $parameters, $domain, $locale) use ($translations) {
-                $translation = $translations[$domain][$id] ?? $id;
+                $translation = $translations[$domain ?? 'messages'][$id] ?? $id;
 
                 foreach ($parameters as $key => $value) {
                     $translation = str_replace($key, $value, $translation);
