@@ -44,6 +44,10 @@ class WexampleSymfonyTranslationsExtension extends AbstractWexampleSymfonyExtens
             'wexample_symfony_translations.locale_routing.excluded_paths',
             $config['locale_routing']['excluded_paths']
         );
+        $container->setParameter(
+            'wexample_symfony_translations.locale_cookie.enabled',
+            $config['locale_cookie']['enabled']
+        );
 
         if ($config['syrtis']['enabled']) {
             $this->registerSyrtisTextTranslator($container, $config['syrtis']);

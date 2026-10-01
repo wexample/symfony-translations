@@ -17,7 +17,8 @@ use Wexample\SymfonyTranslations\Service\LocaleService;
 
 /**
  * Gives a locale to the requests whose url carries none, and remembers the one
- * a page was read in so that those requests follow it.
+ * a page was read in so that those requests follow it. Without a prefix
+ * (locale_cookie), every page is such a request, and `?_locale=` chooses.
  *
  * A page url says its language; an api call, a component rendered on demand or
  * a form submission does not, and would otherwise be answered in the default
@@ -46,6 +47,12 @@ final class LocaleSubscriber implements EventSubscriberInterface
     {
         $request = $event->getRequest();
 
+        if ($this->localeService->isCookieEnabled()) {
+            $this->chooseFromQuery($request);
+
+            return;
+        }
+
         if (! $this->localeService->isRoutingEnabled()
             || $request->attributes->has(LocaleService::LOCALE_ATTRIBUTE)) {
             return;
@@ -55,13 +62,34 @@ final class LocaleSubscriber implements EventSubscriberInterface
         $request->setLocale($this->localeService->guessLocale($request, true));
     }
 
+    /**
+     * Without a prefix, the language a url names is a choice: `?_locale=en`
+     * switches to it, and the response keeps it in the cookie. The request
+     * attribute is what the framework's LocaleListener, and whatever remembers
+     * a choice (an account), read it from. Named by no url, the language is
+     * the one last chosen, then the browser's.
+     */
+    private function chooseFromQuery(Request $request): void
+    {
+        $chosen = $request->query->get(LocaleService::LOCALE_ATTRIBUTE);
+
+        if (is_string($chosen) && $this->localeService->hasLocale($chosen)) {
+            $request->attributes->set(LocaleService::LOCALE_ATTRIBUTE, $chosen);
+            $request->setLocale($chosen);
+
+            return;
+        }
+
+        $request->setLocale($this->localeService->guessLocale($request));
+    }
+
     public function onKernelResponse(ResponseEvent $event): void
     {
         $request = $event->getRequest();
         $locale = $request->attributes->get(LocaleService::LOCALE_ATTRIBUTE);
 
         if (! $event->isMainRequest()
-            || ! $this->localeService->isRoutingEnabled()
+            || ! ($this->localeService->isRoutingEnabled() || $this->localeService->isCookieEnabled())
             || ! $this->localeService->hasLocale($locale)
             || $locale === $request->cookies->get(LocaleService::LOCALE_COOKIE)) {
             return;

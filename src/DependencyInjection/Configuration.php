@@ -69,6 +69,11 @@ class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                 ->end()
+                // Without a prefix: a page asked with ?_locale= switches the
+                // language, a cookie keeps it, the browser's says it otherwise.
+                ->arrayNode('locale_cookie')
+                    ->canBeEnabled()
+                ->end()
                 // Translates through a session on a Syrtis translation scenario.
                 ->arrayNode('syrtis')
                     ->canBeEnabled()

@@ -37,6 +37,7 @@ class LocaleService
         private readonly bool $routingEnabled,
         private readonly array $excludedPaths,
         private readonly array $contentLocales = [],
+        private readonly bool $cookieEnabled = false,
     ) {
     }
 
@@ -110,6 +111,15 @@ class LocaleService
     public function isRoutingEnabled(): bool
     {
         return $this->routingEnabled;
+    }
+
+    /**
+     * Whether the language is switched by `?_locale=` and kept in a cookie,
+     * the urls carrying none.
+     */
+    public function isCookieEnabled(): bool
+    {
+        return $this->cookieEnabled;
     }
 
     /**

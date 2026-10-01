@@ -70,6 +70,14 @@ class LocaleExtension extends AbstractExtension
     private function buildLocaleUrl(string $locale): ?string
     {
         $request = $this->requestStack->getMainRequest();
+
+        // Without a prefix, the same page asked in that language.
+        if ($this->localeService->isCookieEnabled()) {
+            return $request->getBaseUrl().$request->getPathInfo().'?'.http_build_query(
+                [LocaleService::LOCALE_ATTRIBUTE => $locale] + $request->query->all()
+            );
+        }
+
         $routeParams = $request->attributes->get('_route_params', []);
 
         if (! array_key_exists(LocaleService::LOCALE_ATTRIBUTE, $routeParams)) {
