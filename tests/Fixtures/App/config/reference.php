@@ -958,6 +958,9 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
  *         enabled?: bool, // Default: false
  *         excluded_paths?: list<scalar|null>,
  *     },
+ *     locale_cookie?: bool|array{
+ *         enabled?: bool, // Default: false
+ *     },
  *     syrtis?: bool|array{
  *         enabled?: bool, // Default: false
  *         host?: scalar|null, // Default: "https://api.syrtis.ai"
