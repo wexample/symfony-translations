@@ -20,8 +20,10 @@ use Wexample\SymfonyTranslations\Translation\Translator;
 /**
  * Translates the interface: every element of the application gets its `<to>`
  * locale — a `.<to>.yml`, or a block of its `.trans.yml` — for each target
- * locale, and the target locales are enabled. The bundles' files only when
- * asked for, as they belong to their packages. With a `storage` configured, the
+ * locale, and the target locales are enabled. Without any target named, every
+ * enabled locale but the source one: what keeps an application translated as
+ * its wording grows, a new locale being named once to be enabled for good. The
+ * bundles' files only when asked for, as they belong to their packages. With a `storage` configured, the
  * elements are converted to it first.
  */
 class TranslateFilesCommand extends AbstractTranslationCommand
@@ -47,7 +49,7 @@ class TranslateFilesCommand extends AbstractTranslationCommand
         parent::configure();
 
         $this
-            ->addArgument('to', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'The locales to translate into')
+            ->addArgument('to', InputArgument::IS_ARRAY, 'The locales to translate into, every enabled locale but the source one if omitted')
             ->addOption('from', null, InputOption::VALUE_REQUIRED, 'The locale to translate from, the default locale if omitted')
             ->addOption('path', null, InputOption::VALUE_REQUIRED, 'Only the files whose path contains this string')
             ->addOption('include-bundles', null, InputOption::VALUE_NONE, 'Also write into the translation directories of the bundles, which belong to their packages')
@@ -61,9 +63,16 @@ class TranslateFilesCommand extends AbstractTranslationCommand
         OutputInterface $output
     ): int {
         $io = new SymfonyStyle($input, $output);
-        $locales = array_values(array_unique($input->getArgument('to')));
         $from = $input->getOption('from') ?? $this->localeService->getDefaultLocale();
+        $locales = array_values(array_unique($input->getArgument('to')))
+            ?: array_values(array_diff($this->localeService->getEnabledLocales(), [$from]));
         $dryRun = (bool) $input->getOption('dry-run');
+
+        if ([] === $locales) {
+            $io->error('No locale to translate into: name one, or enable some in framework.enabled_locales.');
+
+            return Command::FAILURE;
+        }
 
         if (in_array($from, $locales, true)) {
             $io->error('The source locale is among the target ones: '.$from);
