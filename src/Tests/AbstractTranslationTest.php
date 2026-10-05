@@ -27,9 +27,9 @@ abstract class AbstractTranslationTest extends AbstractApplicationTestCase
         $kernel->method('getProjectDir')
             ->willReturn(__DIR__);
 
+        // A stub answers by its arguments through a map: with() belongs to mocks.
         $parameterBag->method('get')
-            ->with('translations_paths')
-            ->willReturn([__DIR__ . '/Resources/translations']);
+            ->willReturnMap([['translations_paths', [__DIR__ . '/Resources/translations']]]);
 
         // Create a stub for the Symfony translator's getCatalogue method
         $catalogue = new \Symfony\Component\Translation\MessageCatalogue('test');

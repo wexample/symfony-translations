@@ -24,8 +24,7 @@ class TranslationTest extends AbstractTranslationTest
             ->willReturn(__DIR__);
 
         $parameterBag->method('get')
-            ->with('translations_paths')
-            ->willReturn([__DIR__ . '/Resources/translations']);
+            ->willReturnMap([['translations_paths', [__DIR__ . '/Resources/translations']]]);
 
         // Configure the Symfony translator's getFallbackLocales method
         $this->symTranslator->method('getFallbackLocales')
