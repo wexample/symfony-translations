@@ -94,6 +94,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     private array $transFiles = [];
 
+    private string $transFilesCacheDir;
+
     /**
      * @throws InvalidArgumentException|Exception
      */
@@ -102,6 +104,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         KernelInterface $kernel,
         private readonly ParameterBagInterface $parameterBag
     ) {
+        $this->transFilesCacheDir = $kernel->getCacheDir() . '/wexample_translations/trans_files';
+
         // Initialize locales from the Symfony translator
         $this->addLocale($this->getLocale());
 
@@ -255,7 +259,66 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     private function parseTransFile(string $filePath): array
     {
-        return $this->transFiles[$filePath] ??= (Yaml::parseFile($filePath) ?? []);
+        return $this->transFiles[$filePath] ??= $this->readTransFile($filePath);
+    }
+
+    /**
+     * A .trans.yml holds every language of an element, and the translator is
+     * built on every request: parsed each time, the demo's files alone cost
+     * seconds a page. The parsed content is kept as php in the kernel cache,
+     * stamped with the file's time and size, and parsed again only once the
+     * file has changed.
+     */
+    private function readTransFile(string $filePath): array
+    {
+        $stamp = filemtime($filePath) . '-' . filesize($filePath);
+        $cacheFile = $this->transFilesCacheDir . '/' . hash('xxh128', $filePath) . '.php';
+
+        if (is_file($cacheFile)) {
+            $cached = include $cacheFile;
+
+            if (is_array($cached) && ($cached['stamp'] ?? null) === $stamp) {
+                return $cached['content'];
+            }
+        }
+
+        $content = Yaml::parseFile($filePath) ?? [];
+
+        $this->writeTransFileCache($cacheFile, $stamp, $content);
+
+        return $content;
+    }
+
+    // Written aside then moved, so that a request reading it meanwhile finds
+    // the previous file whole or none, never half of one. A cache that cannot
+    // be written only means parsing again next time.
+    private function writeTransFileCache(string $cacheFile, string $stamp, array $content): void
+    {
+        $directory = dirname($cacheFile);
+
+        if (! is_dir($directory) && ! @mkdir($directory, 0777, true) && ! is_dir($directory)) {
+            return;
+        }
+
+        $temporary = @tempnam($directory, 'trans');
+
+        if (false === $temporary) {
+            return;
+        }
+
+        $code = '<?php return ' . var_export(['stamp' => $stamp, 'content' => $content], true) . ';' . PHP_EOL;
+
+        if (false === @file_put_contents($temporary, $code) || ! @rename($temporary, $cacheFile)) {
+            @unlink($temporary);
+
+            return;
+        }
+
+        @chmod($cacheFile, 0666);
+
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($cacheFile, true);
+        }
     }
 
     /**
