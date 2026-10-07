@@ -48,6 +48,10 @@ class WexampleSymfonyTranslationsExtension extends AbstractWexampleSymfonyExtens
             'wexample_symfony_translations.locale_cookie.enabled',
             $config['locale_cookie']['enabled']
         );
+        $container->setParameter(
+            'wexample_symfony_translations.strict',
+            $config['strict'] ?? 'test' === $container->getParameter('kernel.environment')
+        );
 
         if ($config['syrtis']['enabled']) {
             $this->registerSyrtisTextTranslator($container, $config['syrtis']);

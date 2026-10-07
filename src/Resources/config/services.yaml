@@ -16,7 +16,8 @@ services:
     Wexample\SymfonyTranslations\Translation\Translator:
       decorates: translator
       arguments:
-        - '@translator.default'
+        $translator: '@translator.default'
+        $strict: '%wexample_symfony_translations.strict%'
       public: false
 
     Wexample\SymfonyTranslations\Service\LocaleService:

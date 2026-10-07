@@ -42,9 +42,20 @@ class WexampleSymfonyTranslationsExtensionTest extends TestCase
         $this->assertSame('https://api.syrtis.ai', $arguments['$client']->getArgument('$host'));
     }
 
-    private function load(array $config): ContainerBuilder
+    public function testStrictInTheTestEnvironmentOnly(): void
     {
+        $this->assertTrue($this->load([], 'test')->getParameter('wexample_symfony_translations.strict'));
+        $this->assertFalse($this->load([], 'dev')->getParameter('wexample_symfony_translations.strict'));
+        $this->assertFalse($this->load(['strict' => false], 'test')->getParameter('wexample_symfony_translations.strict'));
+        $this->assertTrue($this->load(['strict' => true], 'prod')->getParameter('wexample_symfony_translations.strict'));
+    }
+
+    private function load(
+        array $config,
+        string $environment = 'test'
+    ): ContainerBuilder {
         $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', $environment);
         (new WexampleSymfonyTranslationsExtension())->load([$config], $container);
 
         return $container;

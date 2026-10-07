@@ -970,6 +970,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     locale_cookie?: bool|array{
  *         enabled?: bool|Param, // Default: false
  *     },
+ *     strict?: bool|Param|null, // Default: null
  *     syrtis?: bool|array{
  *         enabled?: bool|Param, // Default: false
  *         host?: scalar|Param|null, // Default: "https://api.syrtis.ai"

@@ -4,6 +4,8 @@ namespace Wexample\SymfonyTranslations\Twig;
 
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+use Twig\TwigFilter;
 use Twig\TwigFunction;
 use Wexample\SymfonyHelpers\Twig\AbstractExtension;
 use Wexample\SymfonyTranslations\Service\LocaleService;
@@ -14,7 +16,48 @@ class LocaleExtension extends AbstractExtension
         private readonly LocaleService $localeService,
         private readonly RequestStack $requestStack,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly TranslatorInterface $translator,
     ) {
+    }
+
+    public function getFilters(): array
+    {
+        return [
+            new TwigFilter(
+                'number',
+                [
+                    $this,
+                    'formatNumber',
+                ]
+            ),
+        ];
+    }
+
+    /**
+     * A number written the way the locale writes it: `1 234,5` in French,
+     * `1,234.5` in English. Given decimals, exactly that many, zeros
+     * included, so that figures line up in a column; otherwise those it has,
+     * up to three. Anything not numeric is printed as it is.
+     *
+     * @param string|null $locale the translator's when omitted
+     */
+    public function formatNumber(
+        mixed $value,
+        ?int $decimals = null,
+        ?string $locale = null
+    ): string {
+        if (! is_numeric($value)) {
+            return (string) $value;
+        }
+
+        $formatter = new \NumberFormatter($locale ?? $this->translator->getLocale(), \NumberFormatter::DECIMAL);
+
+        if (null !== $decimals) {
+            $formatter->setAttribute(\NumberFormatter::MIN_FRACTION_DIGITS, $decimals);
+            $formatter->setAttribute(\NumberFormatter::MAX_FRACTION_DIGITS, $decimals);
+        }
+
+        return (string) $formatter->format(+$value);
     }
 
     public function getFunctions(): array

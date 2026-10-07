@@ -74,6 +74,12 @@ class Configuration implements ConfigurationInterface
                 ->arrayNode('locale_cookie')
                     ->canBeEnabled()
                 ->end()
+                // A `domain::key` no locale defines throws a MissingTranslationException
+                // instead of being printed as is. Left unset, on in the test environment:
+                // every page a test renders is checked.
+                ->booleanNode('strict')
+                    ->defaultNull()
+                ->end()
                 // Translates through a session on a Syrtis translation scenario.
                 ->arrayNode('syrtis')
                     ->canBeEnabled()

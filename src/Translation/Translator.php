@@ -33,6 +33,7 @@ use Wexample\Helpers\Helper\VariableSpecialHelper;
 use Wexample\PhpYaml\YamlIncludeResolver;
 use Wexample\SymfonyHelpers\Helper\VariableHelper;
 use Wexample\SymfonyTemplate\Helper\TemplateHelper;
+use Wexample\SymfonyTranslations\Exception\MissingTranslationException;
 use Wexample\SymfonyTranslations\Helper\TransFileHelper;
 
 class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface
@@ -102,7 +103,9 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function __construct(
         public \Symfony\Bundle\FrameworkBundle\Translation\Translator $translator,
         KernelInterface $kernel,
-        private readonly ParameterBagInterface $parameterBag
+        private readonly ParameterBagInterface $parameterBag,
+        // A missing `domain::key` throws instead of being returned as is.
+        private readonly bool $strict = false,
     ) {
         $this->transFilesCacheDir = $kernel->getCacheDir() . '/wexample_translations/trans_files';
 
@@ -637,9 +640,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         $this->ensureCataloguePopulated($locale);
 
         $default = $id;
+        $keyed = false;
 
         // Handle domain resolution from the ID if no domain is provided
         if (null === $domain && ($domain = YamlIncludeResolver::splitDomain($id))) {
+            $keyed = true;
             $id = YamlIncludeResolver::splitKey($id);
             $domain = $this->resolveDomain($domain);
 
@@ -665,6 +670,12 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 $domain,
                 $definingLocale
             );
+        }
+
+        // Only a `domain::key`: plain text goes through trans() too, and is
+        // meant to come back unchanged.
+        if ($keyed && $this->strict) {
+            throw MissingTranslationException::create($id, $domain, $this->getLocaleChain($locale));
         }
 
         return $default;
