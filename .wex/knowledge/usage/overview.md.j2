@@ -10,4 +10,4 @@ The same bundle serves such an application in several languages:
 
 Both translations go through one engine interface, left to plug: until then texts are copied as they are, and replaced on the first run with a real engine. The cookbook's [translate the application](../cookbook/translate-the-application) walks through all three.
 
-Numbers are written the way the page's language writes them by the `number` filter: `{{ 1234.5|number(2) }}` gives `1,234.50` in English and `1 234,50` in French, the decimals given being fixed, zeros included.
+Numbers are written the way the page's language writes them by the `number` filter: {% raw %}`{{ 1234.5|number(2) }}`{% endraw %} gives `1,234.50` in English and `1 234,50` in French, the decimals given being fixed, zeros included.
