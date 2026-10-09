@@ -1,6 +1,7 @@
 # Translations: catalogue cache, entity/DB translations, helpers from network
 
 Opened: 2026-09-24
+Closed: 2026-10-09
 Updated: 2026-10-09
 Author: agent:archeology
 
@@ -34,4 +35,14 @@ Issues: `/home/weeger/Desktop/WIP/WEB/WEXAMPLE/NETWORK/archeo/gitlab/issues/152.
 ## 2026-10-09 : étape 1 faite (cache du catalogue)
 
 Au cache par fichier `.trans.yml` (4f9e421) s'ajoute celui du catalogue résolu, par langue (`var/cache/<env>/wexample_translations/catalogues/<locale>.php`), estampillé par la liste des fichiers, leurs dates et leurs tailles : un balayage sans lecture suffit tant que rien ne change. Hors debug, les fichiers ne sont même plus listés : le cache est cru jusqu'au prochain déploiement, qui vide le cache du kernel. Construction du traducteur dans MOJOE design system : 102 ms → 25 ms par requête en debug, 5 ms hors debug. Test : `tests/Integration/CatalogueCacheTest.php`. Restent les étapes 2, 3, 5 et 6.
+
+## Clos le 2026-10-09 (le bundle sert beaucoup et marche bien : ne rien sur-migrer)
+
+- Étape 1 : faite (cache du catalogue résolu, fichiers non relus hors debug), voir plus haut.
+- Étape 2 (`transArray`) : non portée, l'intention se dit en Twig (`ids|map(id => id|trans)|join(', ')`).
+- Étape 3 (listes de choix traduites) : couverte par symfony-forms, `SelectInputType` traduit ses choix (`field.<nom>.choice.<valeur>.label`, option `auto_translate_choices`).
+- Étape 4 : remplacée par `#[Translatable]` et `translated()` (voir plus haut).
+- Étape 5 (#152) : test ajouté dans php-yaml (`YamlIncludeResolverReferenceTest`) : « @ », « 50 % », une adresse restent du texte.
+- Étape 6 (libellés fr) : les langues sont produites par l'outil de traduction externe à partir de `en:` ; rien à reprendre à la main de network.
+- En plus : `trans_exists()` / `Translator::has()` pour un texte optionnel en mode strict.
 
