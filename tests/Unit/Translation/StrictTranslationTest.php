@@ -42,6 +42,16 @@ class StrictTranslationTest extends TestCase
         $this->assertSame('front.home::goodbye', $this->translator(false)->trans('front.home::goodbye'));
     }
 
+    public function testAnOptionalTextIsAskedForWithoutThrowing(): void
+    {
+        $translator = $this->translator(true);
+
+        $this->assertTrue($translator->has('front.home::hello'));
+        $this->assertFalse($translator->has('front.home::goodbye'));
+        $this->assertFalse($translator->has('@page::title'));
+        $this->assertFalse($translator->has('Save'));
+    }
+
     private function translator(bool $strict): Translator
     {
         $catalogues = [

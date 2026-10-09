@@ -688,6 +688,23 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * @param bool $forceTranslate Whether to force translation even if the key doesn't exist
      * @return string The translated string
      */
+    /**
+     * Whether a `domain::key` is translated, in the locale or one of its
+     * fallbacks: what a template asks before showing an optional text, which
+     * `trans()` would refuse in strict mode.
+     */
+    public function has(string $id, ?string $locale = null): bool
+    {
+        $locale ??= $this->getLocale();
+        $this->ensureCataloguePopulated($locale);
+
+        if (! ($domain = YamlIncludeResolver::splitDomain($id)) || ! ($domain = $this->resolveDomain($domain))) {
+            return false;
+        }
+
+        return null !== $this->findLocaleDefining(YamlIncludeResolver::splitKey($id), $domain, $locale);
+    }
+
     public function trans(
         string $id,
         array $parameters = [],

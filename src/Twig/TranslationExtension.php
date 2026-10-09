@@ -23,6 +23,14 @@ class TranslationExtension extends AbstractExtension
                     'translationBuildDomainFromTemplatePath',
                 ]
             ),
+            // An optional text: `{% if trans_exists(key) %}{{ key|trans }}{% endif %}`.
+            new TwigFunction(
+                'trans_exists',
+                [
+                    $this->translator,
+                    'has',
+                ]
+            ),
             new TwigFunction(
                 'translation_debug_info',
                 [
