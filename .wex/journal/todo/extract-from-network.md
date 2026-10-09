@@ -33,5 +33,5 @@ Issues: `/home/weeger/Desktop/WIP/WEB/WEXAMPLE/NETWORK/archeo/gitlab/issues/152.
 
 ## 2026-10-09 : étape 1 faite (cache du catalogue)
 
-Au cache par fichier `.trans.yml` (4f9e421) s'ajoute celui du catalogue résolu, par langue (`var/cache/<env>/wexample_translations/catalogues/<locale>.php`), estampillé par la liste des fichiers, leurs dates et leurs tailles : un balayage sans lecture suffit tant que rien ne change. Construction du traducteur dans MOJOE design system : 102 ms → 28 ms par requête. Test : `tests/Integration/CatalogueCacheTest.php`. Restent les étapes 2, 3, 5 et 6.
+Au cache par fichier `.trans.yml` (4f9e421) s'ajoute celui du catalogue résolu, par langue (`var/cache/<env>/wexample_translations/catalogues/<locale>.php`), estampillé par la liste des fichiers, leurs dates et leurs tailles : un balayage sans lecture suffit tant que rien ne change. Hors debug, les fichiers ne sont même plus listés : le cache est cru jusqu'au prochain déploiement, qui vide le cache du kernel. Construction du traducteur dans MOJOE design system : 102 ms → 25 ms par requête en debug, 5 ms hors debug. Test : `tests/Integration/CatalogueCacheTest.php`. Restent les étapes 2, 3, 5 et 6.
 

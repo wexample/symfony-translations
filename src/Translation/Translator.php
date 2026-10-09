@@ -106,6 +106,13 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     private string $transFilesCacheDir;
 
     /**
+     * Whether the files may change while the kernel runs: in debug, every
+     * request checks them; otherwise only a deployment changes them, and it
+     * clears the kernel cache.
+     */
+    private bool $watchFiles;
+
+    /**
      * @throws InvalidArgumentException|Exception
      */
     public function __construct(
@@ -116,6 +123,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         private readonly bool $strict = false,
     ) {
         $this->transFilesCacheDir = $kernel->getCacheDir() . '/wexample_translations/trans_files';
+        $this->watchFiles = $kernel->isDebug();
 
         // Initialize locales from the Symfony translator
         $this->addLocale($this->getLocale());
@@ -127,10 +135,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         // Load translation paths
         $this->loadTranslationPaths($kernel->getProjectDir());
 
-        // Load translation files
-        $this->loadTranslationFiles();
-
-        // Populate catalogues
+        // Populate catalogues: their files are listed only where needed
         $this->populateCatalogues();
 
         // Build @entity.X aliases from all entity.X domains in the catalogue
@@ -198,12 +203,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     /**
      * Load translation files for all locales
      */
-    private function loadTranslationFiles(): void
-    {
-        foreach ($this->getAllLocales() as $locale) {
-            $this->loadTranslationFilesForLocale($locale);
-        }
-    }
 
     /**
      * The files of a locale: per-locale `.yml` files first, then the
@@ -362,7 +361,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     public function populateCatalogues(): void
     {
-        foreach (array_keys($this->localeFiles) as $locale) {
+        foreach ($this->getAllLocales() as $locale) {
             $this->populateCatalogueForLocale($locale);
         }
     }
@@ -373,35 +372,32 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * of a request: the resolved catalogue is kept in the kernel cache,
      * stamped with the list of its files and their times and sizes, and
      * resolved again only once one of them is added, removed or changed.
+     * Out of debug the files are not even listed: the cache is trusted until
+     * the next deployment clears it.
      *
      * @throws Exception If there's an error resolving values
      */
     private function populateCatalogueForLocale(string $locale): void
     {
-        if (! isset($this->localeFiles[$locale])) {
-            return;
-        }
-
-        $stamp = $this->stampFiles($this->localeFiles[$locale]);
         $cacheFile = dirname($this->transFilesCacheDir) . '/catalogues/' . $locale . '.php';
-        $messages = null;
+        $cached = is_file($cacheFile) ? include $cacheFile : null;
 
-        if (is_file($cacheFile)) {
-            $cached = include $cacheFile;
-
-            if (is_array($cached) && ($cached['stamp'] ?? null) === $stamp) {
-                $messages = $cached['content'];
+        if (! is_array($cached) || $this->watchFiles) {
+            if (! isset($this->localeFiles[$locale])) {
+                $this->loadTranslationFilesForLocale($locale);
             }
-        }
 
-        if (null === $messages) {
-            $messages = $this->resolveMessages($locale);
-            $this->writeTransFileCache($cacheFile, $stamp, $messages);
+            $stamp = $this->stampFiles($this->localeFiles[$locale]);
+
+            if (($cached['stamp'] ?? null) !== $stamp) {
+                $cached = ['stamp' => $stamp, 'content' => $this->resolveMessages($locale)];
+                $this->writeTransFileCache($cacheFile, $stamp, $cached['content']);
+            }
         }
 
         $catalogue = $this->translator->getCatalogue($locale);
 
-        foreach ($messages as $domain => $values) {
+        foreach ($cached['content'] as $domain => $values) {
             $catalogue->add($values, $domain);
         }
     }
@@ -662,7 +658,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         unset($this->cataloguesPopulated[$locale]);
         if (! isset($this->locales[$locale])) {
             $this->addLocale($locale);
-            $this->loadTranslationFilesForLocale($locale);
             $this->populateCatalogueForLocale($locale);
         }
     }
@@ -788,7 +783,6 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
         if (! isset($this->locales[$locale])) {
             $this->addLocale($locale);
-            $this->loadTranslationFilesForLocale($locale);
         }
 
         $this->populateCatalogueForLocale($locale);
