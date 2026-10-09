@@ -95,6 +95,14 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     private array $transFiles = [];
 
+    /**
+     * The files a locale is read from, found by a scan that opens none of
+     * them: the catalogue cache is checked against their times and sizes.
+     *
+     * @var array<string, list<array{string, string, string}>> locale → [kind, path, domain]
+     */
+    private array $localeFiles = [];
+
     private string $transFilesCacheDir;
 
     /**
@@ -198,16 +206,13 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     }
 
     /**
-     * Load translation files for a specific locale
+     * The files of a locale: per-locale `.yml` files first, then the
+     * `.trans.yml` files holding every language of an element. Only listed
+     * here; read when the catalogue cannot come from the cache.
      */
     private function loadTranslationFilesForLocale(string $locale): void
     {
-        // Create a resolver for this locale if it doesn't exist
-        if (! isset($this->yamlResolvers[$locale])) {
-            $this->yamlResolvers[$locale] = new YamlIncludeResolver();
-        }
-
-        $resolver = $this->yamlResolvers[$locale];
+        $files = [];
 
         foreach ($this->translationPaths as $key => $basePath) {
             if (! is_dir($basePath)) {
@@ -225,7 +230,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                     $locale,
                     $basePath,
                     $key,
-                    $resolver,
+                    &$files,
                     &$transFiles
                 ) {
                     $filename = $file->getFilename();
@@ -233,11 +238,10 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
                     if (str_ends_with($filename, $expectedSuffix)) {
                         $filePath = $file->getPathname();
-
                         $domain = $this->buildDomainFromPath($filePath, $basePath, is_string($key) ? $key : null);
 
                         if (! empty($domain)) {
-                            $resolver->registerFile($domain, $filePath);
+                            $files[] = ['file', $filePath, $domain];
                         }
                     } elseif (str_ends_with($filename, TransFileHelper::SUFFIX)) {
                         $transFiles[] = $file->getPathname();
@@ -247,14 +251,38 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
             // After the per-locale files: an element holding a .trans.yml is read from it.
             foreach ($transFiles as $filePath) {
-                $content = $this->parseTransFile($filePath)[$locale] ?? null;
                 $domain = $this->buildDomainFromPath($filePath, $basePath, is_string($key) ? $key : null);
 
-                if (is_array($content) && ! empty($domain)) {
-                    $resolver->registerContent($domain, $content);
+                if (! empty($domain)) {
+                    $files[] = ['trans', $filePath, $domain];
                 }
             }
         }
+
+        $this->localeFiles[$locale] = $files;
+        unset($this->yamlResolvers[$locale]);
+    }
+
+    /**
+     * The files of a locale, read into its resolver.
+     */
+    private function getResolver(string $locale): YamlIncludeResolver
+    {
+        if (isset($this->yamlResolvers[$locale])) {
+            return $this->yamlResolvers[$locale];
+        }
+
+        $resolver = $this->yamlResolvers[$locale] = new YamlIncludeResolver();
+
+        foreach ($this->localeFiles[$locale] ?? [] as [$kind, $filePath, $domain]) {
+            if ('file' === $kind) {
+                $resolver->registerFile($domain, $filePath);
+            } elseif (is_array($content = $this->parseTransFile($filePath)[$locale] ?? null)) {
+                $resolver->registerContent($domain, $content);
+            }
+        }
+
+        return $resolver;
     }
 
     /**
@@ -334,48 +362,84 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      */
     public function populateCatalogues(): void
     {
-        // Process each locale
-        foreach ($this->yamlResolvers as $locale => $resolver) {
+        foreach (array_keys($this->localeFiles) as $locale) {
             $this->populateCatalogueForLocale($locale);
         }
     }
 
     /**
-     * Populate a single translation catalogue with resolved values from YAML files.
+     * Populate a single translation catalogue with resolved values from YAML
+     * files. Resolving includes and references through every file costs most
+     * of a request: the resolved catalogue is kept in the kernel cache,
+     * stamped with the list of its files and their times and sizes, and
+     * resolved again only once one of them is added, removed or changed.
      *
      * @throws Exception If there's an error resolving values
      */
     private function populateCatalogueForLocale(string $locale): void
     {
-        if (! isset($this->yamlResolvers[$locale])) {
+        if (! isset($this->localeFiles[$locale])) {
             return;
         }
 
-        $resolver = $this->yamlResolvers[$locale];
+        $stamp = $this->stampFiles($this->localeFiles[$locale]);
+        $cacheFile = dirname($this->transFilesCacheDir) . '/catalogues/' . $locale . '.php';
+        $messages = null;
 
-        // Get the catalogue for this locale
-        $catalogue = $this->translator->getCatalogue($locale);
+        if (is_file($cacheFile)) {
+            $cached = include $cacheFile;
 
-        // Get all domains from the resolver
-        if ($domainsContent = $resolver->getAllDomainsContent()) {
-            $domains = array_keys($domainsContent);
-
-            // For each domain, resolve all values and add them to the catalogue
-            foreach ($domains as $domain) {
-                $values = $domainsContent[$domain] ?? [];
-
-                if (! empty($values)) {
-                    $resolvedValues = $resolver->resolveValues($values, $domain);
-                    $flattenedValues = ArrayHelper::flattenArray($resolvedValues);
-
-                    foreach ($flattenedValues as $key => $value) {
-                        if (is_string($value)) {
-                            $catalogue->add([$key => $value], $domain);
-                        }
-                    }
-                }
+            if (is_array($cached) && ($cached['stamp'] ?? null) === $stamp) {
+                $messages = $cached['content'];
             }
         }
+
+        if (null === $messages) {
+            $messages = $this->resolveMessages($locale);
+            $this->writeTransFileCache($cacheFile, $stamp, $messages);
+        }
+
+        $catalogue = $this->translator->getCatalogue($locale);
+
+        foreach ($messages as $domain => $values) {
+            $catalogue->add($values, $domain);
+        }
+    }
+
+    /**
+     * Every message of a locale, by domain, includes and references resolved.
+     *
+     * @return array<string, array<string, string>>
+     */
+    private function resolveMessages(string $locale): array
+    {
+        $resolver = $this->getResolver($locale);
+        $messages = [];
+
+        foreach ($resolver->getAllDomainsContent() ?: [] as $domain => $values) {
+            if (empty($values)) {
+                continue;
+            }
+
+            $flattened = ArrayHelper::flattenArray($resolver->resolveValues($values, $domain));
+            $messages[$domain] = array_filter($flattened, 'is_string');
+        }
+
+        return array_filter($messages);
+    }
+
+    /**
+     * @param list<array{string, string, string}> $files
+     */
+    private function stampFiles(array $files): string
+    {
+        $parts = [];
+
+        foreach ($files as [$kind, $filePath, $domain]) {
+            $parts[] = $kind . '|' . $filePath . '|' . $domain . '|' . @filemtime($filePath) . '|' . @filesize($filePath);
+        }
+
+        return hash('xxh128', implode("\n", $parts));
     }
 
     /**

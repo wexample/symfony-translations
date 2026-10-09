@@ -1,7 +1,7 @@
 # Translations: catalogue cache, entity/DB translations, helpers from network
 
 Opened: 2026-09-24
-Updated: 2026-09-24
+Updated: 2026-10-09
 Author: agent:archeology
 
 ## Read this first — status of this todo
@@ -30,3 +30,8 @@ Issues: `/home/weeger/Desktop/WIP/WEB/WEXAMPLE/NETWORK/archeo/gitlab/issues/152.
 ## Do not
 
 - Do not port `/home/weeger/Desktop/WIP/WEB/WEXAMPLE/NETWORK/archeo/trees/develop-131-fos-user/src/Service/TranslationParameter/**`: it belongs to the mail/notification domain, rebuilt as a tagged locator there.
+
+## 2026-10-09 : étape 1 faite (cache du catalogue)
+
+Au cache par fichier `.trans.yml` (4f9e421) s'ajoute celui du catalogue résolu, par langue (`var/cache/<env>/wexample_translations/catalogues/<locale>.php`), estampillé par la liste des fichiers, leurs dates et leurs tailles : un balayage sans lecture suffit tant que rien ne change. Construction du traducteur dans MOJOE design system : 102 ms → 28 ms par requête. Test : `tests/Integration/CatalogueCacheTest.php`. Restent les étapes 2, 3, 5 et 6.
+
