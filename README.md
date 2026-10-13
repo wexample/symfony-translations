@@ -1,6 +1,6 @@
 # symfony_translations
 
-Version: 12.0.0
+Version: 13.0.0
 
 `symfony_translations` is a Symfony bundle whose `Wexample\SymfonyTranslations\Translation\Translator` wraps the framework translator and builds one domain per translation file: it scans the project's `translations/` directory and every path listed in the `translations_paths` parameter for `*.<locale>.yml` files, and `*.trans.yml` ones holding every locale of an element, derives the domain from each file's path, and resolves the YAML includes and cross-file references they contain before adding the result to the catalogue. Keys may carry their domain (`app.pages.home::title`), and a stack of named domains lets a template address its own file through an alias — `setDomain('page', 'app.pages.home')` makes `@page::title` resolve, and `revertDomain('page')` puts the previous one back. A key missing in a language is read in its fallback; one missing from every language is printed as it is, except in the test environment, where it throws a `MissingTranslationException` naming the key, its domain and the locales tried (`strict`, to set either way).
 
@@ -175,13 +175,13 @@ Visit the [Wexample Suite documentation](https://docs.wexample.com) for the comp
 - php: >=8.5
 - symfony/translation: >=6.2
 - syrtis/php-client: >=4.0.0
-- wexample/symfony-helpers: >=15.0.0
-- wexample/symfony-testing: >=6.0.0
+- wexample/symfony-helpers: >=16.0.0
 - wexample/php-helpers: >=7.0.0
 - wexample/php-yaml: >=2.0.0
 - wexample/symfony-template: >=2.0.5
 - symfony/intl: >=6.2
 - symfony/serializer: >=6.2
+- wexample/symfony-testing: >=7.0.0
 
 ## Versioning & Compatibility Policy
 
