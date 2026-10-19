@@ -4,10 +4,10 @@ namespace Wexample\SymfonyTranslations\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Symfony\Contracts\Service\ResetInterface;
 use Wexample\SymfonyTranslations\Attribute\Translatable;
 use Wexample\SymfonyTranslations\Repository\ContentTranslationRepository;
 use Wexample\SymfonyTranslations\Translation\Translator;
-use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Serves the #[Translatable] fields of any entity in the language asked for.

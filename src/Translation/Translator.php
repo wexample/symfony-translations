@@ -24,6 +24,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Translation\MessageCatalogueInterface;
 use Symfony\Component\Translation\TranslatorBagInterface;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Contracts\Service\ResetInterface;
 use Symfony\Contracts\Translation\LocaleAwareInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\Helpers\Helper\ArrayHelper;
@@ -35,7 +36,6 @@ use Wexample\SymfonyHelpers\Helper\VariableHelper;
 use Wexample\SymfonyTemplate\Helper\TemplateHelper;
 use Wexample\SymfonyTranslations\Exception\MissingTranslationException;
 use Wexample\SymfonyTranslations\Helper\TransFileHelper;
-use Symfony\Contracts\Service\ResetInterface;
 
 class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface, ResetInterface
 {

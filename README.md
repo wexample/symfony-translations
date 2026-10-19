@@ -1,6 +1,6 @@
 # symfony_translations
 
-Version: 13.0.1
+Version: 14.0.0
 
 `symfony_translations` is a Symfony bundle whose `Wexample\SymfonyTranslations\Translation\Translator` wraps the framework translator and builds one domain per translation file: it scans the project's `translations/` directory and every path listed in the `translations_paths` parameter for `*.<locale>.yml` files, and `*.trans.yml` ones holding every locale of an element, derives the domain from each file's path, and resolves the YAML includes and cross-file references they contain before adding the result to the catalogue. Keys may carry their domain (`app.pages.home::title`), and a stack of named domains lets a template address its own file through an alias — `setDomain('page', 'app.pages.home')` makes `@page::title` resolve, and `revertDomain('page')` puts the previous one back. A key missing in a language is read in its fallback; one missing from every language is printed as it is, except in the test environment, where it throws a `MissingTranslationException` naming the key, its domain and the locales tried (`strict`, to set either way).
 
@@ -168,17 +168,15 @@ This package is part of the Wexample Suite — a collection of high-quality, mod
 
 The suite includes packages for configuration management, file handling, prompts, and more. Each package can be used independently or as part of the integrated suite.
 
-Visit the [Wexample Suite documentation](https://docs.wexample.com) for the complete package ecosystem.
-
 ## Dependencies
 
 - php: >=8.5
 - symfony/translation: >=6.2
 - syrtis/php-client: >=4.0.0
-- wexample/symfony-helpers: >=16.0.0
+- wexample/symfony-helpers: >=17.0.0
 - wexample/php-helpers: >=7.0.0
 - wexample/php-yaml: >=2.0.0
-- wexample/symfony-template: >=2.0.5
+- wexample/symfony-template: >=2.1.0
 - symfony/intl: >=6.2
 - symfony/serializer: >=6.2
 - wexample/symfony-testing: >=7.0.0
@@ -206,6 +204,8 @@ Free to use in both personal and commercial projects.
 This packages suite embodies this spirit. Trusted by professionals and enthusiasts alike, it delivers a consistent, high-quality foundation for modern development — open, elegant, and battle-tested. Its reputation is built on years of collaboration, refinement, and rigorous attention to detail, making it a natural choice for those who demand both robustness and beauty in their tools.
 
 Wexample cultivates a culture of mastery. Each package, each contribution carries the mark of a community that values precision, ethics, and innovation — a community proud to shape the future of digital craftsmanship.
+
+Built and maintained by [Romain Weeger](https://weeger.io).
 
 ## Migration Notes
 
