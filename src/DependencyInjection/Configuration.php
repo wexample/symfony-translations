@@ -19,6 +19,7 @@ class Configuration implements ConfigurationInterface
         '^/js/routing',
         '^/favicon\.ico$',
         '^/robots\.txt$',
+        '^/sitemap\.xml$',
     ];
 
     final public const string DEFAULT_SYRTIS_HOST = 'https://api.syrtis.ai';
