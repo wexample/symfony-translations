@@ -35,8 +35,9 @@ use Wexample\SymfonyHelpers\Helper\VariableHelper;
 use Wexample\SymfonyTemplate\Helper\TemplateHelper;
 use Wexample\SymfonyTranslations\Exception\MissingTranslationException;
 use Wexample\SymfonyTranslations\Helper\TransFileHelper;
+use Symfony\Contracts\Service\ResetInterface;
 
-class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface
+class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleAwareInterface, ResetInterface
 {
     final public const string DOMAIN_PREFIX = '@';
 
@@ -68,6 +69,13 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
      * Stack of domain contexts, organized by name
      */
     protected array $domainsStack = [];
+
+    /**
+     * The stack as the constructor leaves it — the @entity aliases only —,
+     * restored between two requests a worker serves: the domains a render
+     * pushes are that render's.
+     */
+    private array $bootDomainsStack = [];
 
     /**
      * Available locales
@@ -140,6 +148,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
         // Build @entity.X aliases from all entity.X domains in the catalogue
         $this->buildEntityAliases();
+        $this->bootDomainsStack = $this->domainsStack;
     }
 
     private function buildEntityAliases(): void
@@ -544,6 +553,15 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         } else {
             return $path;
         }
+    }
+
+    /**
+     * The catalogues stay loaded — they are the same for every request —, the
+     * domains a render pushed go.
+     */
+    public function reset(): void
+    {
+        $this->domainsStack = $this->bootDomainsStack;
     }
 
     /**

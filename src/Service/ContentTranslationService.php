@@ -7,6 +7,7 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use Wexample\SymfonyTranslations\Attribute\Translatable;
 use Wexample\SymfonyTranslations\Repository\ContentTranslationRepository;
 use Wexample\SymfonyTranslations\Translation\Translator;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Serves the #[Translatable] fields of any entity in the language asked for.
@@ -21,7 +22,7 @@ use Wexample\SymfonyTranslations\Translation\Translator;
  * entity's text: it records that locale, and is made again when that
  * translation changes.
  */
-class ContentTranslationService
+class ContentTranslationService implements ResetInterface
 {
     /** @var array<class-string, string[]> */
     private array $fieldsByClass = [];
@@ -36,6 +37,15 @@ class ContentTranslationService
         private readonly LocaleService $localeService,
         private readonly Translator $translator,
     ) {
+    }
+
+    /**
+     * Read once per request: kept by a worker, a translation stored since would
+     * never be seen, and the cache would grow with every record read.
+     */
+    public function reset(): void
+    {
+        $this->resolved = [];
     }
 
     /**
