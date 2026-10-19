@@ -71,6 +71,9 @@ final class LocalizedRouteLoader implements LoaderInterface
             self::ROUTE_ROOT_REDIRECT,
             new Route('/', [
                 '_controller' => LocaleRedirectController::class.'::root',
+            ], options: [
+                // A redirect, not a page: kept out of symfony-seo's sitemap.
+                'sitemap' => false,
             ], methods: ['GET', 'HEAD'])
         );
     }
