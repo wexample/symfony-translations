@@ -4,9 +4,9 @@ namespace Wexample\SymfonyTranslations\Tests\Unit\Twig;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Wexample\SymfonyTranslations\Service\LocaleService;
+use Wexample\SymfonyTranslations\Service\LocaleUrlService;
 use Wexample\SymfonyTranslations\Twig\LocaleExtension;
 
 class LocaleExtensionTest extends TestCase
@@ -44,7 +44,7 @@ class LocaleExtensionTest extends TestCase
         return new LocaleExtension(
             $this->createStub(LocaleService::class),
             new RequestStack(),
-            $this->createStub(UrlGeneratorInterface::class),
+            $this->createStub(LocaleUrlService::class),
             $translator,
         );
     }

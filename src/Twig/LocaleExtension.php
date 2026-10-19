@@ -3,19 +3,19 @@
 namespace Wexample\SymfonyTranslations\Twig;
 
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 use Wexample\SymfonyHelpers\Twig\AbstractExtension;
 use Wexample\SymfonyTranslations\Service\LocaleService;
+use Wexample\SymfonyTranslations\Service\LocaleUrlService;
 
 class LocaleExtension extends AbstractExtension
 {
     public function __construct(
         private readonly LocaleService $localeService,
         private readonly RequestStack $requestStack,
-        private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly LocaleUrlService $localeUrlService,
         private readonly TranslatorInterface $translator,
     ) {
     }
@@ -105,7 +105,7 @@ class LocaleExtension extends AbstractExtension
                 'name' => $this->localeService->getLocaleName($locale),
                 // Each name is written its own way, whatever the page's direction.
                 'dir' => $this->localeService->getDirection($locale),
-                'url' => $request ? $this->buildLocaleUrl($locale) : null,
+                'url' => $this->localeUrlService->getLocaleUrl($locale),
                 'current' => $locale === $currentLocale,
             ];
         }
@@ -134,34 +134,5 @@ class LocaleExtension extends AbstractExtension
             'href' => $locale['url'] ?? '#',
             'attr' => ['hreflang' => $locale['code'], 'lang' => $locale['code'], 'data-filter' => $locale['code']],
         ], $locales);
-    }
-
-    /**
-     * Null when the current url carries no locale: an excluded path has no
-     * other version to go to.
-     */
-    private function buildLocaleUrl(string $locale): ?string
-    {
-        $request = $this->requestStack->getMainRequest();
-
-        // Without a prefix, the same page asked in that language.
-        if ($this->localeService->isCookieEnabled()) {
-            return $request->getBaseUrl().$request->getPathInfo().'?'.http_build_query(
-                [LocaleService::LOCALE_ATTRIBUTE => $locale] + $request->query->all()
-            );
-        }
-
-        $routeParams = $request->attributes->get('_route_params', []);
-
-        if (! array_key_exists(LocaleService::LOCALE_ATTRIBUTE, $routeParams)) {
-            return null;
-        }
-
-        $query = $request->getQueryString();
-
-        return $this->urlGenerator->generate(
-            $request->attributes->get('_route'),
-            [LocaleService::LOCALE_ATTRIBUTE => $locale] + $routeParams
-        ).(null !== $query ? '?'.$query : '');
     }
 }
