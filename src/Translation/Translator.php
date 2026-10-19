@@ -539,8 +539,9 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public static function buildDomainFromTemplatePath(string $path): string
     {
         $info = (object) pathinfo($path);
-        // The path format is valid.
-        if ('.' !== $info->dirname) {
+        // The path format is valid. An empty path has no directory at all,
+        // which pathinfo() leaves out rather than calling it '.'.
+        if ('.' !== ($info->dirname ?? '.')) {
             return str_replace(
                 '/',
                 self::KEYS_SEPARATOR,
