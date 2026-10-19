@@ -124,6 +124,36 @@ class SyrtisTextTranslatorTest extends TestCase
         $this->assertSame(['a' => 'A', 'b' => 'B'], $translator->translate(['a' => 'a', 'b' => 'b'], 'fr', 'en'));
     }
 
+    public function testAsksEachKeyOnItsOwnWhenTheBatchFailsTwice(): void
+    {
+        $broken = '{"title": "דו"ח", "line": "שורה"}';
+
+        $translator = $this->createTranslator([
+            $this->reply($broken),
+            $this->reply($broken),
+            $this->reply('{"title": "דו"ח"}'),
+            $this->reply(['line' => 'שורה']),
+        ]);
+
+        // The unescaped quote of the single text is read past.
+        $this->assertSame(
+            ['title' => 'דו"ח', 'line' => 'שורה'],
+            $translator->translate(['title' => 'Report', 'line' => 'Line'], 'en', 'he')
+        );
+        $this->assertCount(4, $this->history);
+        $this->assertSame(['line' => 'Line'], json_decode($this->getSentMessages(3)[1]['content'], true));
+    }
+
+    public function testNeverTakesABrokenObjectForPlainText(): void
+    {
+        $translator = $this->createTranslator([
+            $this->reply('{"title": "Rapport",'),
+            $this->reply('{"other": "Rapport"}'),
+        ]);
+
+        $this->assertSame([], $translator->translate(['title' => 'Report'], 'en', 'fr'));
+    }
+
     /**
      * @param Response[] $responses
      */

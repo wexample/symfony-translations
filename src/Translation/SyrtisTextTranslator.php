@@ -27,10 +27,13 @@ use Wexample\SymfonyTranslations\Interface\TextTranslatorInterface;
  * Batches are cut to fit `max_batch_length` characters of texts, so that the
  * model's answer stays within its output.
  *
- * A model now and then skips a key of a long batch, or answers plain text. The
- * keys left out are asked once more, on their own; those still missing are left
- * out of the result, for the caller to ask again later rather than lose the
- * whole batch. A single text answered as plain text is taken as its translation.
+ * A model now and then skips a key of a long batch, answers plain text, or
+ * breaks its JSON with a quote it leaves unescaped (Hebrew `דו"ח`). The keys
+ * left out are asked once more, together, then each on its own, so that one
+ * broken text no longer takes its batch with it; those still missing are left
+ * out of the result, for the caller to ask again later. A single text answered
+ * as plain text is taken as its translation, and its object read past such a
+ * quote; a broken object is never taken for plain text.
  */
 class SyrtisTextTranslator implements TextTranslatorInterface
 {
@@ -102,7 +105,7 @@ class SyrtisTextTranslator implements TextTranslatorInterface
 
     /**
      * @param array<array-key, string> $batch
-     * @return array<array-key, string> Without the keys left out twice
+     * @return array<array-key, string> Without the keys left out each time
      */
     private function translateBatch(
         array $batch,
@@ -114,6 +117,14 @@ class SyrtisTextTranslator implements TextTranslatorInterface
 
         if ([] !== $missing) {
             $translations += $this->requestTranslations($missing, $sourceLocale, $targetLocale);
+            $missing = array_diff_key($batch, $translations);
+        }
+
+        // Asked together twice already: what fails now is the text itself.
+        if (count($missing) > 1) {
+            foreach ($missing as $key => $text) {
+                $translations += $this->requestTranslations([$key => $text], $sourceLocale, $targetLocale);
+            }
         }
 
         return $translations;
@@ -166,10 +177,9 @@ class SyrtisTextTranslator implements TextTranslatorInterface
         $decoded = json_decode($content, true);
 
         if (! is_array($decoded)) {
-            // A model asked for one text now and then answers the translated
-            // text alone, without its JSON wrapper. Of several, nothing can be
-            // told apart: all are left out, to be asked again.
-            return 1 === count($batch) ? [array_key_first($batch) => $content] : [];
+            // Of several texts, nothing can be told apart: all are left out,
+            // to be asked again.
+            return 1 === count($batch) ? $this->readSingleReply($batch, $content) : [];
         }
 
         $translations = [];
@@ -183,6 +193,39 @@ class SyrtisTextTranslator implements TextTranslatorInterface
         }
 
         return $translations;
+    }
+
+    /**
+     * A model asked for one text now and then answers the translated text
+     * alone, without its JSON wrapper, or wraps it in an object its own quotes
+     * break. Such an object is read up to its last quote; one that cannot be
+     * read is left out, never written as a translation.
+     *
+     * @param array<array-key, string> $batch The one text
+     * @return array<array-key, string>
+     */
+    private function readSingleReply(
+        array $batch,
+        string $content
+    ): array {
+        $key = array_key_first($batch);
+
+        if (! str_starts_with($content, '{')) {
+            return [$key => $content];
+        }
+
+        $pattern = '/^\{\s*"'.preg_quote((string) $key, '/').'"\s*:\s*"(.*)"\s*\}$/su';
+        if (! preg_match($pattern, $content, $match)) {
+            return [];
+        }
+
+        $translation = json_decode('"'.preg_replace('/(?<!\\\\)"/', '\\"', $match[1]).'"');
+
+        if (! is_string($translation)) {
+            return [];
+        }
+
+        return [$key => self::REPLY_SAME === trim($translation) ? $batch[$key] : $translation];
     }
 
     /**
