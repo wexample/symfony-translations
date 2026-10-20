@@ -37,13 +37,27 @@ A key is translated when the target file lacks it, or when its source changed si
 | `--dry-run` | Report what would be written, write nothing |
 | `--path=<text>` | Only the source files whose path contains it |
 | `--from=<locale>` | Translate from another locale than the default one |
-| `--force` | Translate again what an engine translated; hand-written wording is kept |
+| `--force` | Translate again what an engine translated; hand-written and reviewed wording is kept |
 | `--keep-orphans` | Keep the translated files whose source file is gone |
 | `--include-bundles` | Also write into the bundles' translation directories |
 
 A key missing in a language is read in the fallback one, so a page translated in part shows the rest in the default language rather than raw keys.
 
 The source is the application's default locale (`framework.default_locale`, `en` when nothing is set). `--from` takes another one, even one that is not the default: `translations:translate-files ko --from=ja` translates Korean from the Japanese wording.
+
+#### Read over after the engine
+
+An engine translates a sentence well and a term literally: a reading in context — by an agent or by hand — follows the automatic pass. Correct the target files directly and leave the lock as it is: a corrected text keeps its entry, so it stays until its source changes, when it is translated again like any other.
+
+The lock remembers what was read, so that a later pass starts from what is left:
+
+```bash
+php bin/console translations:review-files                     # per locale: read over, left
+php bin/console translations:review-files fr -v               # and the files with texts left
+php bin/console translations:review-files fr --mark --path=pages/home --key=page_title --by=human
+```
+
+`--mark` records `reviewed: agent` or `human` on the lock entries of the texts named — `--path`, `--key` (repeatable, a key and those under it) — and only on those translated from their current source. `--force` leaves a reviewed text as it is, as it leaves a wording written by hand; a changed source retranslates it, and the new entry is unread. Mark what was actually read in its context: a sentence corrected for one term was not read whole. A wording written by hand has no lock entry and counts as read.
 
 #### One file per language, or one file per element
 

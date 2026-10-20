@@ -31,6 +31,11 @@ use Wexample\SymfonyTranslations\Translation\Translator;
  * entry, unless orphans are kept. One the lock does not know was not written
  * here, and is never touched.
  *
+ * An entry may carry who read the translation over in its context after the
+ * engine (`reviewed`: `agent` or `human`): what a later pass need not read
+ * again. `--force` leaves it as it is, as it leaves a wording written by
+ * hand; a changed source retranslates it, and the new entry is unread again.
+ *
  * A key the engine left out gets no lock entry: the target keeps its previous
  * translation, or goes without the key — read in the fallback locale — and the
  * next run asks for it again. A dry run never reaches the engine: it counts
@@ -41,6 +46,11 @@ class TranslationFileService
     final public const string LOCK_FILE_NAME = '.translations.lock.json';
 
     final public const string KEYS_SEPARATOR = '.';
+
+    // Who read a translation over in its context: the lock entry's key, and its values.
+    final public const string REVIEWED = 'reviewed';
+
+    final public const array REVIEWERS = ['agent', 'human'];
 
     public function __construct(
         private readonly Translator $translator,
@@ -173,6 +183,150 @@ class TranslationFileService
     }
 
     /**
+     * Marks as read over by $by the translations of $targetLocale the lock
+     * holds for the current source: one whose source changed since is about
+     * to be translated again, and is not marked. A wording written by hand
+     * has no entry, and needs none. $keyPrefixes narrows it to the keys under
+     * them.
+     *
+     * @param string[] $keyPrefixes
+     * @return int The keys newly marked
+     */
+    public function markReviewed(
+        string $sourceLocale,
+        string $targetLocale,
+        string $by,
+        ?string $pathFilter = null,
+        array $keyPrefixes = [],
+        bool $includeBundles = false,
+        bool $dryRun = false,
+    ): int {
+        if (! in_array($by, self::REVIEWERS, true)) {
+            throw new \InvalidArgumentException(sprintf('A reviewer is one of %s, not "%s".', implode(', ', self::REVIEWERS), $by));
+        }
+
+        $marked = 0;
+
+        foreach ($this->eachTarget($sourceLocale, $targetLocale, $pathFilter, $includeBundles) as [$lockPath, $targetKey, $fileLock, $hashes]) {
+            $updated = $fileLock;
+
+            foreach ($hashes as $key => $hash) {
+                $entry = $fileLock[$key] ?? null;
+
+                if (null === $entry
+                    || $entry['hash'] !== $hash
+                    || PendingTextTranslator::ENGINE_NAME === $entry['engine']
+                    || ($entry[self::REVIEWED] ?? null) === $by
+                    || ! $this->matchesPrefixes((string) $key, $keyPrefixes)) {
+                    continue;
+                }
+
+                $updated[$key][self::REVIEWED] = $by;
+                $marked++;
+            }
+
+            if ($updated !== $fileLock && ! $dryRun) {
+                $this->updateLock($lockPath, $targetKey, $updated);
+            }
+        }
+
+        return $marked;
+    }
+
+    /**
+     * How much of $targetLocale was read over: per target file, its texts and
+     * those read — by a reviewer, or written by hand, which needs no reading.
+     *
+     * @return list<array{path: string, texts: int, reviewed: int}>
+     */
+    public function reviewStatus(
+        string $sourceLocale,
+        string $targetLocale,
+        ?string $pathFilter = null,
+        bool $includeBundles = false,
+    ): array {
+        $status = [];
+
+        foreach ($this->eachTarget($sourceLocale, $targetLocale, $pathFilter, $includeBundles) as [, $targetKey, $fileLock, $hashes, $targetPath]) {
+            $reviewed = 0;
+
+            foreach ($hashes as $key => $hash) {
+                $entry = $fileLock[$key] ?? null;
+
+                if (null === $entry || ($entry['hash'] === $hash && isset($entry[self::REVIEWED]))) {
+                    $reviewed++;
+                }
+            }
+
+            $status[] = ['path' => $targetPath, 'texts' => count($hashes), 'reviewed' => $reviewed];
+        }
+
+        return $status;
+    }
+
+    /**
+     * Every target file of $targetLocale that exists, with its lock entry and
+     * the hash of the current source of each of its texts.
+     *
+     * @return \Generator<array{0: string, 1: string, 2: array, 3: array<string, string>, 4: string}>
+     */
+    private function eachTarget(
+        string $sourceLocale,
+        string $targetLocale,
+        ?string $pathFilter,
+        bool $includeBundles,
+    ): \Generator {
+        foreach ($this->getBasePaths($includeBundles) as $basePath) {
+            $lockPath = $basePath.self::LOCK_FILE_NAME;
+            $lock = is_file($lockPath) ? json_decode(file_get_contents($lockPath), true, flags: JSON_THROW_ON_ERROR) : [];
+
+            foreach ($this->findElements($basePath, $sourceLocale) as $element) {
+                if (null !== $pathFilter && ! str_contains($element, $pathFilter)) {
+                    continue;
+                }
+
+                $source = $this->readLocale($element, $sourceLocale);
+                $target = $this->readLocale($element, $targetLocale);
+
+                if (null === $source || null === $target) {
+                    continue;
+                }
+
+                $leaves = [];
+                $this->collectLeaves($source, [], $leaves);
+                $hashes = [];
+
+                foreach ($leaves as $key => [$path, $value]) {
+                    // A text the target holds: what there is to read over.
+                    if (is_string($value) && ! $this->isVerbatim($path, $value) && null !== $this->getAt($target, $path)) {
+                        $hashes[$key] = TextTranslationService::hashSource($value);
+                    }
+                }
+
+                $targetKey = substr($element, strlen($basePath)).'.'.$targetLocale.'.yml';
+
+                yield [$lockPath, $targetKey, $lock[$targetKey] ?? [], $hashes, $this->getTargetPath($element, $targetLocale)];
+            }
+        }
+    }
+
+    /**
+     * @param string[] $prefixes
+     */
+    private function matchesPrefixes(
+        string $key,
+        array $prefixes
+    ): bool {
+        foreach ($prefixes as $prefix) {
+            if ($key === $prefix || str_starts_with($key, $prefix.self::KEYS_SEPARATOR)) {
+                return true;
+            }
+        }
+
+        return [] === $prefixes;
+    }
+
+    /**
      * One locale of an element, from its `.trans.yml` if it has one, else from
      * its per-locale file.
      *
@@ -242,7 +396,7 @@ class TranslationFileService
      * exclusive lock first: runs for other locales may be writing the same
      * file at the same time, and must not erase each other's entries.
      *
-     * @param array<string, array{hash: string, engine: string}>|null $fileLock Null removes the entry
+     * @param array<string, array{hash: string, engine: string, reviewed?: string}>|null $fileLock Null removes the entry
      */
     private function updateLock(
         string $lockPath,
@@ -311,7 +465,7 @@ class TranslationFileService
                 // Written by hand: never overwritten.
                 $this->setAt($target, $path, $existing);
             } elseif (null === $existing
-                || $force
+                || ($force && ! isset($entry[self::REVIEWED]))
                 || $entry['hash'] !== $hash
                 || (PendingTextTranslator::ENGINE_NAME === $entry['engine'] && PendingTextTranslator::ENGINE_NAME !== $engine)) {
                 $toTranslate[$key] = $value;

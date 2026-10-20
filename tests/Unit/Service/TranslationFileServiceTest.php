@@ -316,6 +316,61 @@ class TranslationFileServiceTest extends TestCase
         $this->assertSame(['de' => ['a' => 'Eins']], Yaml::parseFile($this->dir.'pages/index.trans.yml'));
     }
 
+    public function testAReviewedTranslationSurvivesForceUntilItsSourceChanges(): void
+    {
+        $this->writeSource(['a' => 'One', 'b' => 'Two']);
+        $service = $this->createService($this->createEngine('fake'));
+        $service->translateFiles('en', 'fr');
+
+        // Read over in context, and corrected.
+        file_put_contents($this->dir.'pages/index.fr.yml', Yaml::dump(['a' => 'Un, relu', 'b' => 'FR(TWO)']));
+        $this->assertSame(1, $service->markReviewed('en', 'fr', 'agent', keyPrefixes: ['a']));
+
+        $service->translateFiles('en', 'fr', force: true);
+        $this->assertSame(['a' => 'Un, relu', 'b' => 'FR(TWO)'], $this->readTarget());
+        $this->assertSame('agent', $this->readLock()['pages/index.fr.yml']['a']['reviewed']);
+
+        $this->writeSource(['a' => 'One changed', 'b' => 'Two']);
+        $service->translateFiles('en', 'fr');
+        $this->assertSame('FR(ONE CHANGED)', $this->readTarget()['a']);
+        $this->assertArrayNotHasKey('reviewed', $this->readLock()['pages/index.fr.yml']['a']);
+    }
+
+    public function testMarksOnlyWhatMatchesTheCurrentSource(): void
+    {
+        $this->writeSource(['a' => 'One', 'b' => 'Two']);
+        $service = $this->createService($this->createEngine('fake'));
+        $service->translateFiles('en', 'fr');
+
+        // Changed since its translation: about to be translated again.
+        $this->writeSource(['a' => 'One changed', 'b' => 'Two']);
+
+        $this->assertSame(1, $service->markReviewed('en', 'fr', 'human'));
+        $this->assertArrayNotHasKey('reviewed', $this->readLock()['pages/index.fr.yml']['a']);
+        $this->assertSame('human', $this->readLock()['pages/index.fr.yml']['b']['reviewed']);
+        $this->assertSame(0, $service->markReviewed('en', 'fr', 'human'));
+    }
+
+    public function testReportsWhatIsLeftToReadOver(): void
+    {
+        $this->writeSource(['a' => 'One', 'b' => 'Two', 'c' => 'Three', 'ref' => '@page::title']);
+        $service = $this->createService($this->createEngine('fake'));
+        $service->translateFiles('en', 'fr');
+        $service->markReviewed('en', 'fr', 'agent', keyPrefixes: ['a']);
+
+        $this->assertSame(
+            [['path' => $this->dir.'pages/index.fr.yml', 'texts' => 3, 'reviewed' => 1]],
+            $service->reviewStatus('en', 'fr')
+        );
+    }
+
+    public function testRefusesAnUnknownReviewer(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->createService($this->createEngine('fake'))->markReviewed('en', 'fr', 'robot');
+    }
+
     private function createFailingEngine(): TextTranslatorInterface
     {
         return new class () implements TextTranslatorInterface {

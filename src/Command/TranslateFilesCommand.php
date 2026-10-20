@@ -53,7 +53,7 @@ class TranslateFilesCommand extends AbstractTranslationCommand
             ->addOption('from', null, InputOption::VALUE_REQUIRED, 'The locale to translate from, the default locale if omitted')
             ->addOption('path', null, InputOption::VALUE_REQUIRED, 'Only the files whose path contains this string')
             ->addOption('include-bundles', null, InputOption::VALUE_NONE, 'Also write into the translation directories of the bundles, which belong to their packages')
-            ->addOption('force', null, InputOption::VALUE_NONE, 'Translate again what an engine already translated; wording written by hand is kept')
+            ->addOption('force', null, InputOption::VALUE_NONE, 'Translate again what an engine already translated; wording written by hand or read over is kept')
             ->addOption('keep-orphans', null, InputOption::VALUE_NONE, 'Keep the translated files whose source file is gone, removed otherwise')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Report what would be written, write nothing');
     }
