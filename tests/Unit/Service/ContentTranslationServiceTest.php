@@ -7,6 +7,7 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use PHPUnit\Framework\TestCase;
 use Wexample\SymfonyTranslations\Attribute\Translatable;
 use Wexample\SymfonyTranslations\Interface\TextTranslatorInterface;
+use Wexample\SymfonyTranslations\Interface\TranslationReadinessInterface;
 use Wexample\SymfonyTranslations\Repository\ContentTranslationRepository;
 use Wexample\SymfonyTranslations\Service\ContentTranslationService;
 use Wexample\SymfonyTranslations\Service\LocaleService;
@@ -59,10 +60,26 @@ class ContentTranslationServiceTest extends TestCase
         $this->assertSame([], $this->calls);
     }
 
-    private function createService(): ContentTranslationService
+    public function testSendsNothingForWhatIsNotReady(): void
+    {
+        $draft = new ContentTranslationServiceTestDraft('Hello', 'World');
+        $this->rows['ko']['title'] = ['field' => 'title', 'value' => '안녕', 'source_hash' => 'x', 'source_locale' => null, 'engine' => null];
+
+        // Its wording written by hand, its own words for the rest.
+        $this->assertSame(['title' => '안녕', 'summary' => 'World'], $this->createService(ContentTranslationServiceTestDraft::class)->translateEntity($draft, 'ko'));
+        $this->assertSame([], $this->calls);
+        $this->assertArrayNotHasKey('summary', $this->rows['ko']);
+
+        // Ready, the next read translates what is missing.
+        $draft->ready = true;
+        $this->assertSame(['title' => '안녕', 'summary' => 'KO(World)'], $this->createService(ContentTranslationServiceTestDraft::class)->translateEntity($draft, 'ko'));
+        $this->assertSame(['en>ko:World'], $this->calls);
+    }
+
+    private function createService(string $class = ContentTranslationServiceTestArticle::class): ContentTranslationService
     {
         $metadata = $this->createStub(ClassMetadata::class);
-        $metadata->method('getName')->willReturn(ContentTranslationServiceTestArticle::class);
+        $metadata->method('getName')->willReturn($class);
         $metadata->method('getFieldValue')->willReturnCallback(static fn (object $entity, string $field) => $entity->$field);
         $metadata->method('getIdentifierValues')->willReturn(['id' => 1]);
 
@@ -105,5 +122,23 @@ class ContentTranslationServiceTestArticle
         #[Translatable]
         public string $title,
     ) {
+    }
+}
+
+class ContentTranslationServiceTestDraft implements TranslationReadinessInterface
+{
+    public bool $ready = false;
+
+    public function __construct(
+        #[Translatable]
+        public string $title,
+        #[Translatable]
+        public string $summary,
+    ) {
+    }
+
+    public function isReadyForTranslation(): bool
+    {
+        return $this->ready;
     }
 }

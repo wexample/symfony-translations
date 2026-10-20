@@ -6,6 +6,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Contracts\Service\ResetInterface;
 use Wexample\SymfonyTranslations\Attribute\Translatable;
+use Wexample\SymfonyTranslations\Interface\TranslationReadinessInterface;
 use Wexample\SymfonyTranslations\Repository\ContentTranslationRepository;
 use Wexample\SymfonyTranslations\Translation\Translator;
 
@@ -177,6 +178,18 @@ class ContentTranslationService implements ResetInterface
             } else {
                 $values[$field] = $row['value'];
             }
+        }
+
+        // Not ready, nothing is sent: what is not translated yet is read in the
+        // entity's own words, and asked for again the next time it is read.
+        if ($entity instanceof TranslationReadinessInterface && ! $entity->isReadyForTranslation()) {
+            foreach ($stale as $texts) {
+                foreach (array_keys($texts) as $field) {
+                    $values[$field] = $sources[$field];
+                }
+            }
+
+            $stale = [];
         }
 
         foreach ($stale as $from => $texts) {
