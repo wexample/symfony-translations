@@ -64,6 +64,24 @@ php bin/console translations:translate-content fr --entity='App\Entity\Article' 
 php bin/console translations:translate-content fr --force                # redo what an engine made
 ```
 
+### Not before it is ready
+
+A draft is not worth an engine's work: implement `TranslationReadinessInterface` and say when it is.
+
+```php
+use Wexample\SymfonyTranslations\Interface\TranslationReadinessInterface;
+
+class Article extends AbstractEntity implements TranslationReadinessInterface
+{
+    public function isReadyForTranslation(): bool
+    {
+        return $this->published;
+    }
+}
+```
+
+While it is not, nothing is sent to the engine — by a page, the api or `translations:translate-content`. Read in another language, it shows the wording written by hand and what was already translated and still holds, its own words for the rest. The first read once it is ready translates what is missing.
+
 ### Wording written by hand
 
 ```php
