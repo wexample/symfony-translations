@@ -6,6 +6,7 @@ use Doctrine\Persistence\Proxy;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareTrait;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
+use Wexample\SymfonyHelpers\Interface\HeadStructuredDataProviderInterface;
 use Wexample\SymfonyTranslations\Service\ContentTranslationService;
 
 /**
@@ -54,6 +55,9 @@ class ContentTranslationNormalizer implements NormalizerInterface, NormalizerAwa
         array $context = []
     ): bool {
         return is_object($data)
+            // The schema.org description reads each field through
+            // TranslatedEntityFieldReader, under names of its own.
+            && HeadStructuredDataProviderInterface::FORMAT_SCHEMA_ORG !== $format
             && ! isset($context[self::ALREADY_CALLED.spl_object_id($data)])
             && ! empty($this->contentTranslationService->getTranslatableFields(
                 $data instanceof Proxy ? get_parent_class($data) : $data::class
