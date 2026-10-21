@@ -2,9 +2,9 @@
 
 namespace Wexample\SymfonyTranslations\Service;
 
-use Psr\Log\LoggerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Psr\Log\LoggerInterface;
 use Symfony\Contracts\Service\ResetInterface;
 use Wexample\SymfonyTranslations\Attribute\Translatable;
 use Wexample\SymfonyTranslations\Interface\TranslationReadinessInterface;
@@ -200,6 +200,7 @@ class ContentTranslationService implements ResetInterface
 
         foreach ($stale as $from => $texts) {
             $from = '' === $from ? null : $from;
+
             try {
                 $translations = $this->textTranslationService->translate($texts, $from ?? $this->getSourceLocale(), $locale);
             } catch (\Throwable $exception) {
