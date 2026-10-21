@@ -16,6 +16,8 @@ use Wexample\SymfonyTranslations\Translation\Translator;
 
 class ContentTranslationServiceTest extends TestCase
 {
+    private bool $engineFails = false;
+
     /** @var array<string, array<string, array>> Rows by locale, by field */
     private array $rows = [];
 
@@ -76,6 +78,18 @@ class ContentTranslationServiceTest extends TestCase
         $this->assertSame(['en>ko:World'], $this->calls);
     }
 
+    public function testAFailingEngineLeavesTheTextInItsOwnWordsAndStoresNothing(): void
+    {
+        $this->engineFails = true;
+        $article = new ContentTranslationServiceTestArticle('Hello');
+
+        $this->assertSame(['title' => 'Hello'], $this->createService()->translateEntity($article, 'ko'));
+        $this->assertArrayNotHasKey('ko', $this->rows);
+
+        $this->engineFails = false;
+        $this->assertSame(['title' => 'KO(Hello)'], $this->createService()->translateEntity($article, 'ko'));
+    }
+
     private function createService(string $class = ContentTranslationServiceTestArticle::class): ContentTranslationService
     {
         $metadata = $this->createStub(ClassMetadata::class);
@@ -99,6 +113,10 @@ class ContentTranslationServiceTest extends TestCase
         $engine = $this->createStub(TextTranslatorInterface::class);
         $engine->method('getEngineName')->willReturn('fake');
         $engine->method('translate')->willReturnCallback(function (array $texts, string $from, string $to): array {
+            if ($this->engineFails) {
+                throw new \RuntimeException('API responded with HTTP 404');
+            }
+
             foreach ($texts as $text) {
                 $this->calls[] = $from.'>'.$to.':'.$text;
             }

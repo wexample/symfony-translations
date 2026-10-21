@@ -2,6 +2,7 @@
 
 namespace Wexample\SymfonyTranslations\Service;
 
+use Psr\Log\LoggerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Contracts\Service\ResetInterface;
@@ -22,6 +23,10 @@ use Wexample\SymfonyTranslations\Translation\Translator;
  * A value may be made from another locale's translation rather than from the
  * entity's text: it records that locale, and is made again when that
  * translation changes.
+ *
+ * An engine that fails leaves the page standing: the fields are read in the
+ * entity's own words, nothing is stored, and they are asked for again the next
+ * time they are read.
  */
 class ContentTranslationService implements ResetInterface
 {
@@ -37,6 +42,7 @@ class ContentTranslationService implements ResetInterface
         private readonly TextTranslationService $textTranslationService,
         private readonly LocaleService $localeService,
         private readonly Translator $translator,
+        private readonly ?LoggerInterface $logger = null,
     ) {
     }
 
@@ -194,7 +200,22 @@ class ContentTranslationService implements ResetInterface
 
         foreach ($stale as $from => $texts) {
             $from = '' === $from ? null : $from;
-            $translations = $this->textTranslationService->translate($texts, $from ?? $this->getSourceLocale(), $locale);
+            try {
+                $translations = $this->textTranslationService->translate($texts, $from ?? $this->getSourceLocale(), $locale);
+            } catch (\Throwable $exception) {
+                $this->logger?->error('The translation engine failed, fields read in their own words.', [
+                    'entity' => $entityClass,
+                    'id' => $entityId,
+                    'locale' => $locale,
+                    'exception' => $exception,
+                ]);
+
+                foreach (array_keys($texts) as $field) {
+                    $values[$field] = $sources[$field];
+                }
+
+                continue;
+            }
 
             foreach ($translations as $field => $translation) {
                 $values[$field] = $translation;
