@@ -192,8 +192,7 @@ class SyrtisTextTranslatorTest extends TestCase
                         'entity' => [
                             'secureId' => 'mes_reply',
                             'content' => is_string($translations) ? $translations : json_encode((object) $translations),
-                            'contentType' => 'conversation',
-                            'format' => 'text',
+                            'contentType' => 'conversation/message',
                             'name' => null,
                             'origin' => 'node',
                         ],

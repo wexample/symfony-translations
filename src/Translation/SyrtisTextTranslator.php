@@ -152,16 +152,14 @@ class SyrtisTextTranslator implements TextTranslatorInterface
                         'source_name' => \Locale::getDisplayName($sourceLocale, 'en'),
                         'target_name' => \Locale::getDisplayName($targetLocale, 'en'),
                     ], JSON_THROW_ON_ERROR),
-                    'contentType' => Message::CONTENT_TYPE_DEFAULT,
-                    'format' => Message::FORMAT_JSON,
+                    'contentType' => Message::CONTENT_TYPE_JSON,
                     'name' => self::MESSAGE_NAME_LANG_CONFIG,
                     'stamps' => [self::STAMP_TRANSLATE],
                 ],
                 [
                     // Keys as strings, so that a list is sent as an object too.
                     'content' => json_encode((object) $batch, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-                    'contentType' => Message::CONTENT_TYPE_CONVERSATION,
-                    'format' => Message::FORMAT_JSON,
+                    'contentType' => Message::CONTENT_TYPE_CONVERSATION_MESSAGE,
                     'stamps' => [self::STAMP_TRANSLATE],
                 ],
             ],
