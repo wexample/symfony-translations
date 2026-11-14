@@ -94,7 +94,14 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     private array $yamlResolvers = [];
 
     /**
-     * Tracks which locales have had their catalogue populated for this request lifecycle.
+     * The catalogue each locale's yml messages were added to. The catalogues
+     * outlive a request, so out of debug a locale is populated once per
+     * process; in debug `reset()` empties it, so that the next request checks
+     * the files again. The object is kept rather than a flag: Symfony drops
+     * its catalogues when a resource is added — as it does loading the first
+     * one on a cold cache —, and the one it builds instead is populated anew.
+     *
+     * @var array<string, MessageCatalogueInterface>
      */
     private array $cataloguesPopulated = [];
 
@@ -409,6 +416,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         foreach ($cached['content'] as $domain => $values) {
             $catalogue->add($values, $domain);
         }
+
+        $this->cataloguesPopulated[$locale] = $catalogue;
     }
 
     /**
@@ -563,6 +572,12 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     public function reset(): void
     {
         $this->domainsStack = $this->bootDomainsStack;
+
+        // In debug the files may have changed before the next request: its
+        // first translation of each locale compares them to the cache again.
+        if ($this->watchFiles) {
+            $this->cataloguesPopulated = [];
+        }
     }
 
     /**
@@ -673,11 +688,11 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         $this->translator->setLocale($locale);
 
+        // Every request sets its locale: a catalogue already populated is
+        // kept as is, only a locale not seen yet is populated here.
         $locale = (string) $locale;
-        unset($this->cataloguesPopulated[$locale]);
         if (! isset($this->locales[$locale])) {
-            $this->addLocale($locale);
-            $this->populateCatalogueForLocale($locale);
+            $this->ensureCataloguePopulated($locale);
         }
     }
 
@@ -813,7 +828,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
     {
         $locale = $locale ?? $this->getLocale();
 
-        if (isset($this->cataloguesPopulated[$locale])) {
+        if (isset($this->cataloguesPopulated[$locale])
+            && $this->cataloguesPopulated[$locale] === $this->translator->getCatalogue($locale)) {
             return;
         }
 
@@ -822,6 +838,5 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
         }
 
         $this->populateCatalogueForLocale($locale);
-        $this->cataloguesPopulated[$locale] = true;
     }
 }

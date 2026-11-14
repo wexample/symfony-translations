@@ -4,6 +4,7 @@ namespace Wexample\SymfonyTranslations\Service;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Intl\Languages;
+use Wexample\SymfonyHelpers\Attribute\WorkerSafe;
 
 /**
  * The locales the application speaks, how each one names itself and which way
@@ -25,6 +26,12 @@ class LocaleService
     final public const string DIRECTION_LTR = 'ltr';
 
     final public const string DIRECTION_RTL = 'rtl';
+
+    /**
+     * @var array<string, string> locale → direction
+     */
+    #[WorkerSafe('What the ICU data says of each locale, the same for every request.')]
+    private array $directions = [];
 
     /**
      * @param string[] $enabledLocales
@@ -93,9 +100,14 @@ class LocaleService
      */
     public function getDirection(string $locale): string
     {
+        // Asked for every page, and opening the bundle reads the ICU data.
+        if (isset($this->directions[$locale])) {
+            return $this->directions[$locale];
+        }
+
         $bundle = \ResourceBundle::create($locale, 'ICUDATA', true);
 
-        return 'right-to-left' === ($bundle['layout']['characters'] ?? null)
+        return $this->directions[$locale] = 'right-to-left' === ($bundle['layout']['characters'] ?? null)
             ? self::DIRECTION_RTL
             : self::DIRECTION_LTR;
     }

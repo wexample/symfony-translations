@@ -28,6 +28,16 @@ class LocaleExtensionTest extends TestCase
         $this->assertSame('3', $extension->formatNumber(2.6, 0));
     }
 
+    public function testAFormatterKeptForLaterLeavesNoDecimalsToTheNextCall(): void
+    {
+        $extension = $this->extension('en');
+
+        $this->assertSame('1,234.50', $extension->formatNumber(1234.5, 2));
+        $this->assertSame('1,234.5', $extension->formatNumber(1234.5));
+        $this->assertSame("1\u{202F}234,50", $extension->formatNumber(1234.5, 2, 'fr'));
+        $this->assertSame('1,234.50', $extension->formatNumber(1234.5, 2));
+    }
+
     public function testWhatIsNotANumberIsPrintedAsItIs(): void
     {
         $extension = $this->extension('en');

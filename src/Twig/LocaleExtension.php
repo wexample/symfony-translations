@@ -6,12 +6,19 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
+use Wexample\SymfonyHelpers\Attribute\WorkerSafe;
 use Wexample\SymfonyHelpers\Twig\AbstractExtension;
 use Wexample\SymfonyTranslations\Service\LocaleService;
 use Wexample\SymfonyTranslations\Service\LocaleUrlService;
 
 class LocaleExtension extends AbstractExtension
 {
+    /**
+     * @var array<string, \NumberFormatter> "locale|decimals" → formatter
+     */
+    #[WorkerSafe('One formatter per locale and number of decimals, configured once and never changed after.')]
+    private array $numberFormatters = [];
+
     public function __construct(
         private readonly LocaleService $localeService,
         private readonly RequestStack $requestStack,
@@ -50,14 +57,23 @@ class LocaleExtension extends AbstractExtension
             return (string) $value;
         }
 
-        $formatter = new \NumberFormatter($locale ?? $this->translator->getLocale(), \NumberFormatter::DECIMAL);
+        $locale ??= $this->translator->getLocale();
+        // Keyed by the decimals too: a formatter is configured once, so that
+        // one call never leaves its decimals to the next.
+        $key = $locale . '|' . ($decimals ?? '');
 
-        if (null !== $decimals) {
-            $formatter->setAttribute(\NumberFormatter::MIN_FRACTION_DIGITS, $decimals);
-            $formatter->setAttribute(\NumberFormatter::MAX_FRACTION_DIGITS, $decimals);
+        if (! isset($this->numberFormatters[$key])) {
+            $formatter = new \NumberFormatter($locale, \NumberFormatter::DECIMAL);
+
+            if (null !== $decimals) {
+                $formatter->setAttribute(\NumberFormatter::MIN_FRACTION_DIGITS, $decimals);
+                $formatter->setAttribute(\NumberFormatter::MAX_FRACTION_DIGITS, $decimals);
+            }
+
+            $this->numberFormatters[$key] = $formatter;
         }
 
-        return (string) $formatter->format(+$value);
+        return (string) $this->numberFormatters[$key]->format(+$value);
     }
 
     public function getFunctions(): array
