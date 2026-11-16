@@ -19,8 +19,9 @@ class Configuration implements ConfigurationInterface
         '^/js/routing',
         '^/favicon\.ico$',
         '^/robots\.txt$',
-        // The sitemap, and its pages when it is split (symfony-seo).
-        '^/sitemap(-\d+)?\.xml$',
+        // The sitemap, and its files when it is split (symfony-seo): read on the
+        // route's path (`/sitemap-{file}.xml`) as on the request's (`/sitemap-2.xml`).
+        '^/sitemap(-(\d+|\{file\}))?\.xml$',
     ];
 
     final public const string DEFAULT_SYRTIS_HOST = 'https://api.syrtis.ai';
