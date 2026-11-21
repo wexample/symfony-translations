@@ -148,7 +148,12 @@ class LocaleExtension extends AbstractExtension
             'checked' => $locale['current'],
             'radio' => true,
             'href' => $locale['url'] ?? '#',
-            'attr' => ['hreflang' => $locale['code'], 'lang' => $locale['code'], 'data-filter' => $locale['code']],
+            // The attributes take the language tag (`pt-BR`), not the locale (`pt_BR`).
+            'attr' => [
+                'hreflang' => $this->localeService->getLanguageTag($locale['code']),
+                'lang' => $this->localeService->getLanguageTag($locale['code']),
+                'data-filter' => $locale['code'],
+            ],
         ], $locales);
     }
 }
