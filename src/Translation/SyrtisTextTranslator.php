@@ -18,7 +18,7 @@ use Wexample\SymfonyTranslations\Interface\TextTranslatorInterface;
  *   "name": "English (United Kingdom)"}}`: each language's Symfony locale
  *   identifier as it is, and its English name from the ICU data — what a
  *   prompt says to the model, with no table of languages to keep there;
- * - a conversation message holding the batch, a JSON object of texts by key.
+ * - a `content/json` message holding the batch, a JSON object of texts by key.
  *
  * It answers with a conversation message holding a JSON object of the
  * translations under the same keys, leaving `[#n]` placeholders untouched.
@@ -161,7 +161,7 @@ class SyrtisTextTranslator implements TextTranslatorInterface
                 [
                     // Keys as strings, so that a list is sent as an object too.
                     'content' => json_encode((object) $batch, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-                    'contentType' => Message::CONTENT_TYPE_CONVERSATION_MESSAGE,
+                    'contentType' => Message::CONTENT_TYPE_JSON,
                     'stamps' => [self::STAMP_TRANSLATE],
                 ],
             ],

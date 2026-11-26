@@ -39,6 +39,7 @@ class SyrtisTextTranslatorTest extends TestCase
             json_decode($config['content'], true)
         );
         $this->assertSame(['translate'], $texts['stamps']);
+        $this->assertSame('content/json', $texts['contentType']);
         $this->assertSame(
             ['title' => 'Bonjour [#0]', '3' => 'Votre commande est prête.'],
             json_decode($texts['content'], true)
