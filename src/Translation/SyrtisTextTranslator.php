@@ -20,7 +20,7 @@ use Wexample\SymfonyTranslations\Interface\TextTranslatorInterface;
  *   prompt says to the model, with no table of languages to keep there;
  * - a `content/json` message holding the batch, a JSON object of texts by key.
  *
- * It answers with a conversation message holding a JSON object of the
+ * It answers with a conversation message or a `content/json` one, holding a JSON object of the
  * translations under the same keys, leaving `[#n]` placeholders untouched.
  * A text already written in the target language comes back as `__SAME__`
  * ("Salut" asked in French): the whole reply for the batch, or the value of
@@ -48,6 +48,9 @@ class SyrtisTextTranslator implements TextTranslatorInterface
     final public const string STAMP_TRANSLATE = 'translate';
 
     final public const string REPLY_SAME = '__SAME__';
+
+    /** What the scenario answers in: a conversation message, or the JSON object as such. */
+    private const array REPLY_CONTENT_TYPES = [Message::CONTENT_TYPE_CONVERSATION_MESSAGE, Message::CONTENT_TYPE_JSON];
 
     public function __construct(
         private readonly SyrtisClient $client,
@@ -233,13 +236,30 @@ class SyrtisTextTranslator implements TextTranslatorInterface
      */
     private function findReply(array $messages): Message
     {
+        // What the scenario could not do says so: never taken for a
+        // translation, whatever it answered besides.
         foreach ($messages as $message) {
-            if ($message->isReply()) {
+            if (Message::CONTENT_TYPE_ERROR === $message->getContentType()) {
+                throw new TranslationReplyException('The translation scenario failed: '.self::errorOf($message));
+            }
+        }
+
+        foreach ($messages as $message) {
+            if (Message::ORIGIN_NODE === $message->getOrigin() && in_array($message->getContentType(), self::REPLY_CONTENT_TYPES, true)) {
                 return $message;
             }
         }
 
         throw new TranslationReplyException('The translation scenario gave no reply.');
+    }
+
+    /** What an error message of the scenario says, in a line. */
+    private static function errorOf(Message $message): string
+    {
+        $content = (string) $message->getContent();
+        $decoded = json_decode($content, true);
+
+        return mb_substr(is_array($decoded) && is_string($decoded['message'] ?? null) ? $decoded['message'] : $content, 0, 300);
     }
 
     /**

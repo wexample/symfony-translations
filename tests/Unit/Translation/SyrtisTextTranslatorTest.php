@@ -9,6 +9,7 @@ use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use SyrtisClient\Common\SyrtisClient;
+use Wexample\SymfonyTranslations\Exception\TranslationReplyException;
 use Wexample\SymfonyTranslations\Translation\SyrtisTextTranslator;
 
 class SyrtisTextTranslatorTest extends TestCase
@@ -44,6 +45,22 @@ class SyrtisTextTranslatorTest extends TestCase
             ['title' => 'Bonjour [#0]', '3' => 'Votre commande est prête.'],
             json_decode($texts['content'], true)
         );
+    }
+
+    public function testAReplyGivenAsJsonIsReadAsOne(): void
+    {
+        $translator = $this->createTranslator([$this->reply(['title' => 'Bonjour'], 'content/json')]);
+
+        $this->assertSame(['title' => 'Bonjour'], $translator->translate(['title' => 'Hello'], 'en', 'fr'));
+    }
+
+    public function testAnErrorOfTheScenarioIsNeverTakenForATranslation(): void
+    {
+        $translator = $this->createTranslator([$this->reply(['message' => 'Expected a string'], 'process/error', 'It seems there was an error. "Hello" is "Bonjour".')]);
+
+        $this->expectException(TranslationReplyException::class);
+        $this->expectExceptionMessage('Expected a string');
+        $translator->translate(['title' => 'Hello'], 'en', 'fr');
     }
 
     public function testCutsBatchesToTheirMaximumLength(): void
@@ -183,8 +200,15 @@ class SyrtisTextTranslatorTest extends TestCase
      *
      * @param array<array-key, string>|string $translations The translations, or the raw reply
      */
-    private function reply(array|string $translations): Response
+    private function reply(array|string $translations, string $contentType = 'conversation/message', ?string $then = null): Response
     {
+        $message = static fn (string $content, string $type): array => [
+            'type' => 'message',
+            'entity' => ['id' => '0190a6f2-7c2e-7b1a-9d3e-5f4a2b1c0d9f', 'content' => $content, 'contentType' => $type, 'name' => null, 'origin' => 'node'],
+            'metadata' => [],
+            'relationships' => [],
+        ];
+
         return new Response(200, ['Content-Type' => 'application/json'], json_encode([
             'type' => 'success',
             'code' => 200,
@@ -195,13 +219,14 @@ class SyrtisTextTranslatorTest extends TestCase
                         'entity' => [
                             'id' => '0190a6f2-7c2e-7b1a-9d3e-5f4a2b1c0d9e',
                             'content' => is_string($translations) ? $translations : json_encode((object) $translations),
-                            'contentType' => 'conversation/message',
+                            'contentType' => $contentType,
                             'name' => null,
                             'origin' => 'node',
                         ],
                         'metadata' => [],
                         'relationships' => [],
                     ],
+                    ...(null === $then ? [] : [$message($then, 'content/json')]),
                 ],
             ],
         ]));
