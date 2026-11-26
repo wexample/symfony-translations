@@ -13,10 +13,11 @@ use Wexample\SymfonyTranslations\Interface\TextTranslatorInterface;
  * Translates through a session on a Syrtis translation scenario, a batch of
  * texts per request. The scenario receives, stamped `translate`:
  *
- * - a `LANG_CONFIG` message, `{"source": "fr", "target": "en_GB", "source_name":
- *   "French", "target_name": "English (United Kingdom)"}`: the Symfony locale
- *   identifiers as they are, and their English names from the ICU data — what
- *   a prompt says to the model, with no table of languages to keep there;
+ * - a `LANG_CONFIG` message of the content type `language/pair`,
+ *   `{"source": {"code": "fr", "name": "French"}, "target": {"code": "en_GB",
+ *   "name": "English (United Kingdom)"}}`: each language's Symfony locale
+ *   identifier as it is, and its English name from the ICU data — what a
+ *   prompt says to the model, with no table of languages to keep there;
  * - a conversation message holding the batch, a JSON object of texts by key.
  *
  * It answers with a conversation message holding a JSON object of the
@@ -40,6 +41,9 @@ class SyrtisTextTranslator implements TextTranslatorInterface
     final public const string ENGINE_NAME = 'syrtis';
 
     final public const string MESSAGE_NAME_LANG_CONFIG = 'LANG_CONFIG';
+
+    /** The content type of the `LANG_CONFIG` message: the language translated from, and the one into. */
+    final public const string CONTENT_TYPE_LANGUAGE_PAIR = 'language/pair';
 
     final public const string STAMP_TRANSLATE = 'translate';
 
@@ -147,12 +151,10 @@ class SyrtisTextTranslator implements TextTranslatorInterface
             messages: [
                 [
                     'content' => json_encode([
-                        'source' => $sourceLocale,
-                        'target' => $targetLocale,
-                        'source_name' => \Locale::getDisplayName($sourceLocale, 'en'),
-                        'target_name' => \Locale::getDisplayName($targetLocale, 'en'),
-                    ], JSON_THROW_ON_ERROR),
-                    'contentType' => Message::CONTENT_TYPE_JSON,
+                        'source' => self::languageOf($sourceLocale),
+                        'target' => self::languageOf($targetLocale),
+                    ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                    'contentType' => self::CONTENT_TYPE_LANGUAGE_PAIR,
                     'name' => self::MESSAGE_NAME_LANG_CONFIG,
                     'stamps' => [self::STAMP_TRANSLATE],
                 ],
@@ -238,5 +240,15 @@ class SyrtisTextTranslator implements TextTranslatorInterface
         }
 
         throw new TranslationReplyException('The translation scenario gave no reply.');
+    }
+
+    /**
+     * A language of the pair: its Symfony locale identifier, and its name in English.
+     *
+     * @return array{code: string, name: string}
+     */
+    private static function languageOf(string $locale): array
+    {
+        return ['code' => $locale, 'name' => \Locale::getDisplayName($locale, 'en')];
     }
 }
